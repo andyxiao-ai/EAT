@@ -56,7 +56,7 @@ and the official score that team reached.
 | 1 | | `solo_optimizer` | 2.19× |
 | 2 | *"Plateau cause = team structure: one agent, anchored on an inherited 2.5k-line generated kernel, so every idea was a patch to its fixed decomposition."* | `architect` · `incumbent_optimizer` · `hw_analyst` | 2.34× |
 | 3 | *"The dynamic instruction count is the unattacked term: no role does SASS-level accounting."* Also: *"Early stopping is a repeat pattern."* | `integrator` · **`issue_economist`** (new) · `analyst`, plus a no-early-stop rule | **2.94×** |
-| 4 | *"A classic local optimum of the fused CAKE structure ... Nobody re-examined the fused-kernel structure itself."* | `integrator` · **`architect`** (must first diagnose why the iteration-2 design missed by 3×) · `analyst` | **3.14×**, past the best published result (2.95×, on B300) |
+| 4 | *"A classic local optimum of the fused CAKE structure ... Nobody re-examined the fused-kernel structure itself."* | `integrator` · **`architect`** (must first diagnose why the iteration-2 design missed by 3×) · `analyst` | **3.14×**, past the best published result (KDA², 2.96× on B300) |
 | 5 | *"The largest measured slack is the prep work per token (work pass, Akk); no role owns reducing it."* | `integrator` · **`prep_architect`** · **`robustness_analyst`** | 3.24× |
 
 The same pattern appears late in long runs. In the MI350X run, iterations 57 and 58 shipped nothing; the
@@ -94,8 +94,8 @@ the leaderboard (55.3, Oct 26, 2026)**. Same scene, left: Pi_05; right: the team
 
 | task | hardware | start | EAT |
 |---|---|---|---|
-| Kimi Delta Attention prefill | AMD MI350X | vLLM ROCm KDA kernels | **3.01×** mean speedup (independently verified) |
-| Kimi Delta Attention prefill, **clean room** | NVIDIA B200 | FlashKDA | **2.42×** on 26 serving workloads, **3.35×** on Int21 (production kernel); 3.48× Int21 in the harness |
+| Kimi Delta Attention prefill | AMD MI350X | vLLM ROCm KDA kernels | **3.01×** mean speedup (independently verified); the serving kernel built from it: 3.04× prefill, 1.69× decode |
+| Kimi Delta Attention prefill, **clean room** | NVIDIA B200 | FlashKDA | **3.44×** on the Int21 workloads; the serving kernel: **2.57×** on 26 serving workloads (2.40× with fp32 checkpoints) |
 | MoE expert offload: Qwen3.8-Flash-Next, 79 GB, MLX 4-bit | Apple M4 Pro, 48 GB | naive offload engine | **3.32×** faster on recorded coding-agent sessions; batch-1 decode 13.4 → 30.3 tokens/s (with a second run) |
 | RoboDojo code policy, 42 tasks | 4-8 AWS g6e (L40S) | Pi_05 (11.44) | **62.08** on held-out seeds (leaderboard #1: 55.3) |
 
