@@ -88,7 +88,7 @@ the leaderboard (55.3, Oct 26, 2026)**. Same scene, left: Pi_05; right: the team
 
 ### Coming soon: Qwen3.8-Flash-Next serving on an Apple M5 Pro
 
-A 79 GB MoE model served from a laptop, with the expert-offload engine written by an EAT team. On an M4 Pro with 48 GB,
+A frontier MoE model served from a laptop, with the expert-offload engine written by an EAT team. On an M4 Pro with 48 GB,
 the team's engine is 3.32× faster than the naive offload engine on recorded coding-agent sessions (batch-1 decode
 13.4 → 30.3 tokens/s). The M5 Pro serving demo is next.
 
