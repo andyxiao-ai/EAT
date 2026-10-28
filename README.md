@@ -63,7 +63,9 @@ for iteration 59:
 That iteration set a new best (2.90×), and the run went on to 3.03×. Every team config, prompt and transcript is in
 the [traces](https://huggingface.co/datasets/eva98/eat-evolution-traces).
 
-## Demo: a robot policy written by agents
+## Demos
+
+### A robot policy written by agents
 
 The starting policy is the Pi_05 VLA. The EAT team replaced it with Python code that calls the frozen Pi_05 and, at
 runtime, Claude, and raised RoboDojo's leaderboard score from 11.4 to **62.1 on held-out seeds, above every entry on
@@ -83,6 +85,12 @@ the leaderboard (55.3, Oct 26, 2026)**. Same scene, left: Pi_05; right: the team
 <td align="center"><sub><code>classify_objects_by_language</code>: task score 3.3 → 80.0</sub></td>
 </tr>
 </table>
+
+### Coming soon: Qwen3.8-Flash-Next serving on an Apple M5 Pro
+
+A 79 GB MoE model served from a laptop, with the expert-offload engine written by an EAT team. On an M4 Pro with 48 GB,
+the team's engine is 3.32× faster than the naive offload engine on recorded coding-agent sessions (batch-1 decode
+13.4 → 30.3 tokens/s). The M5 Pro serving demo is next.
 
 ## Everything is released
 
