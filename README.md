@@ -20,9 +20,10 @@
 
 <table align="center">
 <tr>
-<td align="center" width="33%"><h1>3.01×</h1><b>AMD MI350X</b><br><sub>Kimi Delta Attention prefill<br>over vLLM's ROCm kernels</sub></td>
-<td align="center" width="33%"><h1>2.42×</h1><b>NVIDIA B200</b><br><sub>KDA serving kernel over FlashKDA<br>clean room: no web</sub></td>
-<td align="center" width="33%"><h1>62.1</h1><b>RoboDojo, 42 tasks</b><br><sub>held-out score; leaderboard #1: 55.3<br>start (Pi_05): 11.4</sub></td>
+<td align="center" width="25%"><h1>3.01×</h1><b>AMD MI350X</b><br><sub>Kimi Delta Attention prefill<br>over vLLM's ROCm kernels</sub></td>
+<td align="center" width="25%"><h1>2.42×</h1><b>NVIDIA B200</b><br><sub>KDA serving kernel over FlashKDA<br>clean room: no web</sub></td>
+<td align="center" width="25%"><h1>3.32×</h1><b>Apple M4 Pro, 48 GB</b><br><sub>79 GB MoE served from SSD<br>over the naive engine</sub></td>
+<td align="center" width="25%"><h1>62.1</h1><b>RoboDojo, 42 tasks</b><br><sub>held-out score; leaderboard #1: 55.3<br>start (Pi_05): 11.4</sub></td>
 </tr>
 </table>
 
@@ -104,7 +105,7 @@ the leaderboard (55.3, Oct 26, 2026)**. Same scene, left: Pi_05; right: the team
 |---|---|---|---|
 | Kimi Delta Attention prefill | AMD MI350X | vLLM ROCm KDA kernels | **3.01×** mean speedup (independently verified) |
 | Kimi Delta Attention prefill, **clean room** | NVIDIA B200 | FlashKDA | **2.42×** on 26 serving workloads, **3.35×** on Int21 (production kernel); 3.48× Int21 in the harness |
-| MoE expert offload: Qwen3.8-Flash-Next, 79 GB, MLX 4-bit | Apple M4 Pro, 48 GB | naive offload engine | TBD |
+| MoE expert offload: Qwen3.8-Flash-Next, 79 GB, MLX 4-bit | Apple M4 Pro, 48 GB | naive offload engine | **3.32×** faster on recorded coding-agent sessions; batch-1 decode 13.4 → 30.3 tokens/s (with a second run) |
 | RoboDojo code policy, 42 tasks | 4-8 AWS g6e (L40S) | Pi_05 (11.44) | **62.08** on held-out seeds (leaderboard #1: 55.3) |
 
 Kernel speedups are geomeans from each task's official eval, with correctness as a hard gate. The B200 run was a clean
@@ -184,35 +185,7 @@ An agent that is stopped is resumed once for a final report (so its findings and
 background processes it left running are stopped. A resumed persistent supervisor session is booked only for the cost
 added since it was last booked.
 
-## Layout
-
-```
-SKILL.md                 the skill: setup, launch, status, pause, stop, resume
-.claude-plugin/          plugin and marketplace manifests (`/plugin install eat --marketplace caoshiyi/EAT`)
-agent_team/
-  launch_stateless.sh    supervisor loop (persistent or stateless supervisor sessions), budget accounting
-  launch_team.sh         runs one team: parses TEAM_CONFIG, launches agents per phase, official eval, TEAM_OUTPUT.md
-  parse_team_config.py   TEAM_CONFIG -> per-role prompt files and a phase plan
-  extract_result.py      final text of a `claude --print --output-format json` run
-  SUPERVISOR.md          the supervisor's instructions (how to reflect and evolve, not how to solve the task)
-ops/
-  fetch_task.sh          install a task of the EAT Gym as its own repository
-  env.sh                 run settings shared by the scripts below
-  pick_eval_gpu.sh       pick an idle GPU from $EAT_GPUS (ROCm or NVIDIA)
-  verify_iter.py         re-run an iteration's commit independently (3 evals + optional extra check)
-  curve_data.py          export per-iteration cost / score / team / ships as JSON
-  curve_loop.sh          export the curve every 5 min and verify each new best automatically
-  gpu_run                run a command on an NVIDIA GPU nobody else uses (used by the clean room)
-cleanroom/
-  sandbox.sh             bubblewrap sandbox: only listed sources visible, network only to the Anthropic API
-  allowlist_proxy.py     HTTPS CONNECT proxy that only passes the allowlisted hosts (logs every request)
-  tcp2unix.py            bridge from the sandbox's loopback to the proxy socket
-  audit_clean_traces.py  scan every tool call in a run's transcripts for web use, network, forbidden sources
-  audit_code_overlap.py  line-level overlap of the candidate code with allowed vs forbidden sources
-  audit_after_iter.sh    run both audits after iteration N completes
-```
-
-### Clean-room runs
+## Clean-room runs
 
 To show that a result was not copied from code released after a cutoff, run the whole loop inside
 `cleanroom/sandbox.sh` with only pre-cutoff sources mounted (`EAT_ALLOWED_RO`), web tools disabled
