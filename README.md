@@ -100,12 +100,12 @@ the leaderboard (55.3, Oct 26, 2026)**. Same scene, left: Pi_05; right: the team
 
 ## Results
 
-| task | hardware | start | EAT | iterations |
-|---|---|---|---|---|
-| Kimi Delta Attention prefill | AMD MI350X | vLLM ROCm KDA kernels | **3.01×** mean speedup (independently verified) | 73 |
-| Kimi Delta Attention prefill, **clean room** | NVIDIA B200 | FlashKDA | **2.42×** on 26 serving workloads, **3.35×** on Int21 (production kernel); 3.48× Int21 in the harness | 26 + 16 |
-| MoE expert offload: Qwen3.8-Flash-Next, 79 GB, MLX 4-bit | Apple M4 Pro, 48 GB | naive offload engine | TBD | TBD |
-| RoboDojo code policy, 42 tasks | 4-8 AWS g6e (L40S) | Pi_05 (11.44) | **62.08** on held-out seeds (leaderboard #1: 55.3) | 51 |
+| task | hardware | start | EAT |
+|---|---|---|---|
+| Kimi Delta Attention prefill | AMD MI350X | vLLM ROCm KDA kernels | **3.01×** mean speedup (independently verified) |
+| Kimi Delta Attention prefill, **clean room** | NVIDIA B200 | FlashKDA | **2.42×** on 26 serving workloads, **3.35×** on Int21 (production kernel); 3.48× Int21 in the harness |
+| MoE expert offload: Qwen3.8-Flash-Next, 79 GB, MLX 4-bit | Apple M4 Pro, 48 GB | naive offload engine | TBD |
+| RoboDojo code policy, 42 tasks | 4-8 AWS g6e (L40S) | Pi_05 (11.44) | **62.08** on held-out seeds (leaderboard #1: 55.3) |
 
 Kernel speedups are geomeans from each task's official eval, with correctness as a hard gate. The B200 run was a clean
 room: no network beyond the model API, and no KDA kernel newer than its FlashInfer starting snapshot.
