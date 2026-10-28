@@ -45,7 +45,6 @@ ops/
   fetch_task.sh          install a task from the EAT Gym into this checkout
   pick_eval_gpu.sh       pick an idle GPU from $EAT_GPUS for the official eval (ROCm or NVIDIA)
   gpu_run                run a command on an NVIDIA GPU nobody else uses; preempts itself if someone arrives
-  rotate_supervisor.sh   long runs: replace the persistent supervisor session when its turns get expensive
   curve_data.py          export per-iteration cost / score / team / ships as JSON
   verify_iter.py         re-run an iteration's committed kernel independently (3 evals + optional extra check)
   curve_loop.sh          export the curve every 5 min and verify each new best automatically
@@ -105,7 +104,7 @@ Optional settings (environment variables of `launch_stateless.sh`):
 |---|---|
 | `SUPERVISOR_MODEL` | model of the supervisor session (default: the CLI default) |
 | `AGENT_MODELS` | comma-separated models a role may pick with a `**Model:**` line in the team config; roles without one use the default model |
-| `SUPERVISOR_REFRESH_EVERY` | persistent mode: hand over to a new supervisor session every N iterations; the new session gets a handover note telling it to read the record and reassess the team design |
+| `SUPERVISOR_REFRESH_COST` | persistent mode: after a supervisor turn (with its retries) that cost more than this many dollars, the next iteration starts a new supervisor session with a handover note telling it to read the record and reassess the team design (default: off) |
 | `EAT_PAUSE_FILE` | wait before each iteration while this file exists (e.g. while you run a held-out eval) |
 | `CLAUDE_EXTRA_DISALLOWED` | extra tools to disable for every session (`WebSearch,WebFetch` for clean-room runs) |
 

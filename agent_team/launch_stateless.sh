@@ -16,8 +16,8 @@
 #   start_iter: first iteration number when resuming a run (default: 1)
 # Environment: EVAL_CMD (official eval run after each team, see launch_team.sh), RESUME_SESSION_ID (persistent mode:
 #   continue an earlier supervisor session), CLAUDE_EXTRA_DISALLOWED (extra tools denied to every agent, e.g.
-#   "WebSearch,WebFetch" for clean-room runs), SUPERVISOR_REFRESH_EVERY (persistent mode: hand over to a new
-#   supervisor session every N iterations), EAT_PAUSE_FILE (wait before each iteration while this file exists),
+#   "WebSearch,WebFetch" for clean-room runs), SUPERVISOR_REFRESH_COST (persistent mode: hand over to a new
+#   supervisor session after a supervisor turn that cost more than this many dollars; default off), EAT_PAUSE_FILE (wait before each iteration while this file exists),
 #   SUPERVISOR_MODEL (model of the supervisor session), AGENT_MODELS (comma-separated models a role may pick with
 #   **Model:**; roles without one use the default model)
 
@@ -236,10 +236,10 @@ run_supervisor() {
     if [ "$SUPERVISOR_MODE" = "persistent" ]; then
         local fresh=0
         if [ "$iter" -eq "$START_ITER" ] && [ -z "${RESUME_SESSION_ID:-}" ]; then fresh=1; fi
-        if [ "${SUPERVISOR_REFRESH_EVERY:-0}" -gt 0 ] && [ "$iter" -gt "$START_ITER" ] \
-                && [ $(( (iter - START_ITER) % SUPERVISOR_REFRESH_EVERY )) -eq 0 ]; then
+        if [ "$REFRESH_NEXT" -eq 1 ]; then
             SESSION_ID="$(python3 -c "import uuid; print(uuid.uuid4())")"
             fresh=1
+            REFRESH_NEXT=0
         fi
         if [ "$fresh" -eq 1 ]; then
             # New session: system prompt (+ handover note after iteration 1) + iter prompt
@@ -316,6 +316,11 @@ fi
 echo "Supervisor mode: $SUPERVISOR_MODE"
 echo ""
 
+# Persistent mode: after an iteration whose supervisor turn (with its retries) cost more than SUPERVISOR_REFRESH_COST
+# dollars, the next iteration starts a new supervisor session with a handover note; unset or 0 disables
+SUPERVISOR_REFRESH_COST="${SUPERVISOR_REFRESH_COST:-0}"
+REFRESH_NEXT=0
+
 for ITER in $(seq "$START_ITER" "$MAX_ITERS"); do
     echo ""
     echo "============================================"
@@ -339,6 +344,7 @@ for ITER in $(seq "$START_ITER" "$MAX_ITERS"); do
     SUP_COST=$(extract_cost $SCRIPT_DIR/.supervisor_output.json | tr -d '[:space:]')
     [ "$SUPERVISOR_MODE" = "persistent" ] && SUP_COST=$(session_delta "$SESSION_ID" "$SUP_COST")
     add_cost "$ITER" "supervisor" "$SUP_COST"
+    TURN_COST="$SUP_COST"
     check_budget || break
 
     # Extract the text from JSON output (take first valid JSON line), fall back to raw
@@ -406,6 +412,7 @@ RETRY_PROMPT
         RETRY_COST=$(extract_cost $SCRIPT_DIR/.supervisor_retry.json | tr -d '[:space:]')
         [ "$SUPERVISOR_MODE" = "persistent" ] && RETRY_COST=$(session_delta "$SESSION_ID" "$RETRY_COST")
         add_cost "$ITER" "supervisor-retry-$RETRY" "$RETRY_COST"
+        TURN_COST=$(python3 -c "print(${TURN_COST:-0} + ${RETRY_COST:-0})")
         check_budget || break 2
 
         python3 "$SCRIPT_DIR/extract_result.py" $SCRIPT_DIR/.supervisor_retry.json > $SCRIPT_DIR/.supervisor_retry_raw.txt 2>/dev/null
@@ -435,6 +442,12 @@ RETRY_PROMPT
     echo "[git] Committing iteration $ITER results..."
     git add -A || echo "[git] add failed; continuing"
     git commit -m "iter $ITER: task=$TASK cost=\$$TEAM_COST cumulative=\$$CUMULATIVE_COST score=$CURRENT_SCORE" --allow-empty 2>/dev/null || true
+
+    if [ "$SUPERVISOR_MODE" = "persistent" ] \
+            && python3 -c "import sys; sys.exit(0 if 0 < $SUPERVISOR_REFRESH_COST < ${TURN_COST:-0} else 1)"; then
+        echo "[supervisor] Turn cost \$$TURN_COST > \$$SUPERVISOR_REFRESH_COST: new supervisor session from iteration $((ITER + 1))"
+        REFRESH_NEXT=1
+    fi
 
     echo "[team] Iteration $ITER complete. Results in $TEAM_OUTPUT"
     echo ""
