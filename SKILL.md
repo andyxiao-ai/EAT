@@ -5,7 +5,8 @@ description: Set up and run EAT (Evolving Agent Teams) on a task, where a superv
 
 # EAT
 
-`EAT_HOME` is the directory of this file (the EAT checkout). The harness is `$EAT_HOME/agent_team/launch_stateless.sh`;
+`EAT_HOME` is the directory of this file: `${CLAUDE_SKILL_DIR}` (set `EAT_HOME="${CLAUDE_SKILL_DIR}"` in every shell
+command below). The harness is `$EAT_HOME/agent_team/launch_stateless.sh`;
 it runs from inside the task's git repository and needs three files there:
 
 | file | what it is |

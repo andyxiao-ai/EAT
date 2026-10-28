@@ -29,6 +29,55 @@
 <p align="center"><b>One supervisor agent. No hand-written solution.</b> It designs a team of coding agents, watches it work,
 diagnoses why it stalls, and rebuilds the team, for as long as the budget lasts.</p>
 
+## Get started
+
+In Claude Code, install EAT once:
+
+```
+/plugin install eat --marketplace caoshiyi/EAT
+```
+
+Then, in the repository you want to improve, just ask:
+
+> *Use EAT to make `bench.py` faster on GPUs 0 and 1. Budget $200.*
+>
+> *Run the EAT Gym task `amd_kda_mi350x` on GPUs 0-3 with a $300 budget.*
+
+Claude checks the machine, writes the task's eval and rules with you, records the starting score and launches the run;
+later ask it how the run is going, or to pause, stop or resume it. **Nothing installed?** Tell Claude Code *"Use EAT
+(github.com/caoshiyi/EAT) to ..."* and it fetches the skill itself.
+
+## The supervisor invents the team that breaks the plateau
+
+The supervisor never touches the solution. When the score stalls, it reads the team's transcripts, names what is
+holding it back, and **creates the role that attacks it**. Over the 73 iterations of the MI350X run it used 42
+distinct roles, from a single `solo_optimizer` to an `energy_auditor` and a `lander`:
+
+<p align="center"><img alt="Team composition per iteration of the MI350X run" src="assets/eat_team_evolution.png" width="100%"></p>
+
+**How the B200 run went past the best published kernel in four iterations.** Each row is one iteration: the
+supervisor's diagnosis of the previous team (quoted from its `EVOLUTION_HISTORY.md`), the team it built in response,
+and the official score that team reached.
+
+| iter | the supervisor's diagnosis of the previous team | team it designed | score |
+|:-:|---|---|:-:|
+| 1 | | `solo_optimizer` | 2.19× |
+| 2 | *"Plateau cause = team structure: one agent, anchored on an inherited 2.5k-line generated kernel, so every idea was a patch to its fixed decomposition."* | `architect` · `incumbent_optimizer` · `hw_analyst` | 2.34× |
+| 3 | *"The dynamic instruction count is the unattacked term: no role does SASS-level accounting."* Also: *"Early stopping is a repeat pattern."* | `integrator` · **`issue_economist`** (new) · `analyst`, plus a no-early-stop rule | **2.94×** |
+| 4 | *"A classic local optimum of the fused CAKE structure ... Nobody re-examined the fused-kernel structure itself."* | `integrator` · **`architect`** (must first diagnose why the iteration-2 design missed by 3×) · `analyst` | **3.14×**, past the best published result (2.95×, on B300) |
+| 5 | *"The largest measured slack is the prep work per token (work pass, Akk); no role owns reducing it."* | `integrator` · **`prep_architect`** · **`robustness_analyst`** | 3.24× |
+
+The same pattern appears late in long runs. In the MI350X run, iterations 57 and 58 shipped nothing; the
+supervisor found that the team had been timing its ideas in a different regime from the eval, and wrote a new role
+for iteration 59:
+
+> **ENERGY AUDITOR.** *"The pattern runs on a power transient: device time is 1.08–1.29× the gapped time ... The team
+> has therefore been pricing levers in a regime the score does not use. Your job is to fix the measurement and re-open
+> what it may have mis-judged."*
+
+That iteration set a new best (2.90×), and the run went on to 3.03×. Every team config, prompt and transcript is in
+the [traces](https://huggingface.co/datasets/eva98/eat-evolution-traces).
+
 ## Demo: a robot policy written by agents
 
 The starting policy is the Pi_05 VLA. The EAT team replaced it with Python code that calls the frozen Pi_05 and, at
@@ -90,20 +139,6 @@ while budget remains:
     harness:     launch the team's agents phase by phase -> run the official eval -> record cost and score
 ```
 
-## Quickstart
-
-EAT is a Claude Code skill. Install it once:
-
-```bash
-git clone https://github.com/caoshiyi/EAT ~/.claude/skills/eat
-```
-
-Then open Claude Code in the repository you want to optimize and ask, e.g. *"set up EAT for this repo: maximize the
-throughput of `bench.py` on GPUs 0 1, budget $200"*, or for a task of the EAT Gym: *"run the EAT Gym task
-amd_kda_mi350x on GPUs 0 1 with a $300 budget"*. The skill ([`SKILL.md`](SKILL.md)) checks the machine, writes the
-task files with you, records the starting score, launches the run in tmux, and later reports on it, pauses, stops or
-resumes it.
-
 ## What a task provides
 
 Any git repository becomes an EAT task with three files:
@@ -126,9 +161,9 @@ run started from. `bash ops/fetch_task.sh <task> <dir> --setup` installs one as 
 ## Running by hand
 
 ```bash
-cd <task repository>
+cd <task repository>                               # EAT_HOME: your EAT checkout
 bash eat/eval.sh                                   # the starting score
-tmux new-session -d -s eat_run "EAT_GPUS='0 1' bash ~/.claude/skills/eat/agent_team/launch_stateless.sh \
+tmux new-session -d -s eat_run "EAT_GPUS='0 1' bash $EAT_HOME/agent_team/launch_stateless.sh \
     --persistent 50 3 300 2>&1 | tee -a .work/eat.log"   # 50 iterations, teams of up to 3, $300
 ```
 
@@ -153,6 +188,7 @@ added since it was last booked.
 
 ```
 SKILL.md                 the skill: setup, launch, status, pause, stop, resume
+.claude-plugin/          plugin and marketplace manifests (`/plugin install eat --marketplace caoshiyi/EAT`)
 agent_team/
   launch_stateless.sh    supervisor loop (persistent or stateless supervisor sessions), budget accounting
   launch_team.sh         runs one team: parses TEAM_CONFIG, launches agents per phase, official eval, TEAM_OUTPUT.md
@@ -182,6 +218,11 @@ To show that a result was not copied from code released after a cutoff, run the 
 `cleanroom/sandbox.sh` with only pre-cutoff sources mounted (`EAT_ALLOWED_RO`), web tools disabled
 (`CLAUDE_EXTRA_DISALLOWED=WebSearch,WebFetch`) and network limited to the Anthropic API by the proxy; then audit
 the transcripts and the produced code with `cleanroom/audit_*.py`.
+
+## For coding agents
+
+If a user asks you to use EAT and the `eat` skill is not installed: clone this repository (for example to
+`~/.claude/skills/eat`) and follow [`SKILL.md`](SKILL.md), with `EAT_HOME` set to the clone.
 
 ## Citation
 
