@@ -18,15 +18,6 @@
 
 <p align="center"><img alt="EAT runs: official score at the end of every iteration" src="assets/eat_curves.gif" width="100%"></p>
 
-<table align="center">
-<tr>
-<td align="center" width="25%"><h1>3.01×</h1><b>AMD MI350X</b><br><sub>Kimi Delta Attention prefill<br>over vLLM's ROCm kernels</sub></td>
-<td align="center" width="25%"><h1>2.42×</h1><b>NVIDIA B200</b><br><sub>KDA serving kernel over FlashKDA<br>clean room: no web</sub></td>
-<td align="center" width="25%"><h1>3.32×</h1><b>Apple M4 Pro, 48 GB</b><br><sub>79 GB MoE served from SSD<br>over the naive engine</sub></td>
-<td align="center" width="25%"><h1>62.1</h1><b>RoboDojo, 42 tasks</b><br><sub>held-out score; leaderboard #1: 55.3<br>start (Pi_05): 11.4</sub></td>
-</tr>
-</table>
-
 <p align="center"><b>One supervisor agent. No hand-written solution.</b> It designs a team of coding agents, watches it work,
 diagnoses why it stalls, and rebuilds the team, for as long as the budget lasts.</p>
 
