@@ -16,6 +16,65 @@
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-Apache--2.0-5C7FA3?style=flat-square&labelColor=0E1A2B"></a>
 </p>
 
+<p align="center"><img alt="EAT runs: official score at the end of every iteration" src="assets/eat_curves.gif" width="100%"></p>
+
+<table align="center">
+<tr>
+<td align="center" width="33%"><h1>3.01×</h1><b>AMD MI350X</b><br><sub>Kimi Delta Attention prefill<br>over vLLM's ROCm kernels</sub></td>
+<td align="center" width="33%"><h1>2.42×</h1><b>NVIDIA B200</b><br><sub>KDA serving kernel over FlashKDA<br>clean room: no web</sub></td>
+<td align="center" width="33%"><h1>62.1</h1><b>RoboDojo, 42 tasks</b><br><sub>held-out score; leaderboard #1: 55.3<br>start (Pi_05): 11.4</sub></td>
+</tr>
+</table>
+
+<p align="center"><b>One supervisor agent. No hand-written solution.</b> It designs a team of coding agents, watches it work,
+diagnoses why it stalls, and rebuilds the team, for as long as the budget lasts.</p>
+
+## Demo: a robot policy written by agents
+
+The starting policy is the Pi_05 VLA. The EAT team replaced it with Python code that calls the frozen Pi_05 and, at
+runtime, Claude, and raised RoboDojo's leaderboard score from 11.4 to **62.1 on held-out seeds, above every entry on
+the leaderboard (55.3, Oct 26, 2026)**. Same scene, left: Pi_05; right: the team's code policy.
+
+<p align="center"><img alt="RoboDojo make_kong: Pi_05 vs. the EAT code policy" src="assets/robodojo_make_kong.gif" width="100%"></p>
+<p align="center"><sub><code>make_kong</code> (Mahjong): task score 16.7 → 97.2. <a href="assets/robodojo_make_kong.mp4">Full video</a></sub></p>
+
+<table>
+<tr>
+<td width="50%"><img alt="RoboDojo arrange_largest_number" src="assets/robodojo_arrange.gif" width="100%"></td>
+<td width="50%"><img alt="RoboDojo classify_objects_by_language" src="assets/robodojo_cbl.gif" width="100%"></td>
+</tr>
+<tr>
+<td align="center"><sub><code>arrange_largest_number</code>: task score 2.5 → 88.3</sub></td>
+<td align="center"><sub><code>classify_objects_by_language</code>: task score 3.3 → 80.0</sub></td>
+</tr>
+</table>
+
+## Results
+
+| task | hardware | start | EAT | iterations |
+|---|---|---|---|---|
+| Kimi Delta Attention prefill | AMD MI350X | vLLM ROCm KDA kernels | **3.01×** mean speedup (independently verified) | 73 |
+| Kimi Delta Attention prefill, **clean room** | NVIDIA B200 | FlashKDA | **2.42×** on 26 serving workloads, **3.35×** on Int21 (production kernel); 3.48× Int21 in the harness | 26 + 16 |
+| MoE expert offload: Qwen3.8-Flash-Next, 79 GB, MLX 4-bit | Apple M4 Pro, 48 GB | naive offload engine | TBD | TBD |
+| RoboDojo code policy, 42 tasks | 4-8 AWS g6e (L40S) | Pi_05 (11.44) | **62.08** on held-out seeds (leaderboard #1: 55.3) | 51 |
+
+Kernel speedups are geomeans from each task's official eval, with correctness as a hard gate. The B200 run was a clean
+room: no network beyond the model API, and no KDA kernel newer than its FlashInfer starting snapshot.
+
+<p align="center"><img alt="Full runs on four settings" src="assets/fig_new_domains.png" width="100%"></p>
+<p align="center"><sub>Score at the end of each iteration, from the paper (Figure 7). (a) MI350X, from a port of vLLM's
+kernels. (b) B200, from a port of FlashInfer's KDA kernels. (c) MoE offload from the naive engine; star: final engine on
+the recorded sessions. (d) RoboDojo: dev (seed 1) and held-out (seeds 0, 2) scores, with leaderboard references as of
+Oct 26, 2026.</sub></p>
+
+**Everything is released.** The kernels, packaged for inference engines (vLLM-style serving interface with paged state
+and prefix-cache checkpoints): [eat-kernels](https://github.com/caoshiyi/eat-kernels). Every supervisor and agent
+transcript, team config, note and per-iteration kernel or policy:
+[eva98/eat-evolution-traces](https://huggingface.co/datasets/eva98/eat-evolution-traces). The tasks, at the state each
+run started from: [EAT Gym](https://huggingface.co/datasets/eva98/eat-gym).
+
+## How it works
+
 EAT is a harness in which a **supervisor** agent repeatedly designs, launches and revises a **team** of coding agents
 (Claude Code) that optimize a GPU kernel (or another program, such as a robot policy) against a fixed eval. The
 supervisor never writes the solution; its only output each iteration is a team configuration (roles, prompts, phases,
@@ -123,39 +182,6 @@ To show that a result was not copied from code released after a cutoff, run the 
 `cleanroom/sandbox.sh` with only pre-cutoff sources mounted (`EAT_ALLOWED_RO`), web tools disabled
 (`CLAUDE_EXTRA_DISALLOWED=WebSearch,WebFetch`) and network limited to the Anthropic API by the proxy; then audit
 the transcripts and the produced code with `cleanroom/audit_*.py`.
-
-## Results
-
-<p align="center"><img alt="Full runs on four settings" src="assets/fig_new_domains.png" width="900"></p>
-<p align="center"><sub>Harness score at the end of each iteration. (a) MI350X, from a port of vLLM's kernels. (b) B200,
-from a port of FlashInfer's KDA kernels. (c) MoE offload from the naive engine; star: final engine on the recorded
-sessions. (d) RoboDojo, 42 tasks: dev (seed 1) and held-out (seeds 0, 2) scores, with leaderboard references as of
-Oct 26, 2026. (Figure 7 of the paper.)</sub></p>
-
-| task | hardware | baseline | result | iterations |
-|---|---|---|---|---|
-| `amd_kda_mi350x`: Kimi Delta Attention prefill | AMD MI350X | vLLM ROCm KDA kernels | 3.01x mean speedup (independently verified; harness 2.99-3.03x) | 73 |
-| `b200_kda_clean`: Kimi Delta Attention prefill, clean room | NVIDIA B200 | FlashKDA | 2.42x on the serving set, 3.35x on the Int21 workloads (geomean) | 26 + 16 |
-| `ftm_qwen4_offload`: MoE expert-offload serving (Qwen3.8-Flash-Next, MLX 4-bit, 79 GB) | Apple M4 Pro, 48 GB | naive offload engine | TBD | TBD |
-| `robodojo_codepolicy`: RoboDojo code policy (10 tasks, all 42 from iteration 37) | 4-8 AWS g6e (L40S) | Pi_05 on every task (11.44 on the leaderboard) | 62.08 on held-out seeds 0 / 2, all 42 tasks, leaderboard formula (leaderboard best on Oct 26, 2026: 55.3) | 51 |
-
-Kernel speedups are geomeans from each task's official eval; correctness is a hard gate. `b200_kda_clean` ran in the
-clean room (no network, no KDA kernels newer than its FlashInfer starting snapshot).
-
-The KDA kernels are released in [eat-kernels](https://github.com/caoshiyi/eat-kernels), packaged for inference
-engines (`kda/mi350x`, `kda/b200`: vLLM-style serving interface with paged state and prefix-cache checkpoints;
-`_plain` variants for plain calls). The full evolution traces (every supervisor and agent transcript, team configs,
-notes, per-iteration kernels and policies) are in the Hugging Face dataset
-[eva98/eat-evolution-traces](https://huggingface.co/datasets/eva98/eat-evolution-traces) (`amd_kda_mi350x/`,
-`b200_kda_clean/`, `robodojo_codepolicy/`).
-
-### RoboDojo demo
-
-The team's policy is Python code that calls the frozen Pi_05 VLA and, at runtime, Claude. Below, the same
-`make_kong` (Mahjong) scene with the starting Pi_05 policy (left, task score 16.7) and the evolved code policy
-(right, 97.2). [Full video](assets/robodojo_make_kong.mp4).
-
-<p align="center"><img alt="RoboDojo make_kong: Pi_05 vs. the EAT code policy" src="assets/robodojo_make_kong.gif" width="900"></p>
 
 ## Citation
 
