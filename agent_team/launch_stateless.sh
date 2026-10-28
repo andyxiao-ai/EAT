@@ -6,10 +6,13 @@
 #   stateless  — each supervisor turn is a fresh Claude session (sees ONLY the last team's output)
 #   persistent — one continuous Claude session across all iterations (full conversation history)
 #
-# Usage: bash agent_team/launch_stateless.sh [--persistent|--stateless] task [max_iterations] [max_team_size] [budget] [start_iter]
+# Usage, from inside the task's git repository:
+#   bash <EAT>/agent_team/launch_stateless.sh [--persistent|--stateless] [max_iterations] [max_team_size] [budget] [start_iter]
 #   --persistent: supervisor keeps conversation history across iterations
 #   --stateless:  supervisor gets a fresh session each iteration (default)
-#   task: a task installed with ops/fetch_task.sh (tasks/<task>/ and agent_team/requirements/<task>.md)
+#   The task repository provides eat/task.md (the rules put into every agent's prompt), eat/eval.sh (the official eval,
+#   ending with a line "SCORE: <x>") and optionally eat/env.sh (sourced first: venv, paths, GPUs). The run's record
+#   (team configs, agent outputs, evals, BUDGET.md) goes to eat/log/.
 #   max_iterations: max supervisor turns (default: 20)
 #   max_team_size: max agents per iteration (default: 3)
 #   budget: total budget in dollars (default: 800)
@@ -34,17 +37,22 @@ elif [[ "${1:-}" == "--stateless" ]]; then
     shift
 fi
 
-TASK="${1:?usage: launch_stateless.sh [--persistent|--stateless] task [max_iterations] [max_team_size] [budget] [start_iter]}"
-MAX_ITERS="${2:-20}"
-MAX_TEAM_SIZE="${3:-3}"
-BUDGET="${4:-800}"
-START_ITER="${5:-1}"
+MAX_ITERS="${1:-20}"
+MAX_TEAM_SIZE="${2:-3}"
+BUDGET="${3:-800}"
+START_ITER="${4:-1}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-[ -f "$SCRIPT_DIR/requirements/$TASK.md" ] || { echo "task $TASK is not installed: bash ops/fetch_task.sh $TASK" >&2; exit 1; }
-TEAM_OUTPUT="$SCRIPT_DIR/TEAM_OUTPUT.md"
-TEAM_CONFIG="$SCRIPT_DIR/TEAM_CONFIG.md"
-BUDGET_LOG="$SCRIPT_DIR/BUDGET.md"
+PROJECT_DIR="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "run this from inside the task's git repository" >&2; exit 1; }
+REQUIREMENTS="$PROJECT_DIR/eat/task.md"
+[ -f "$REQUIREMENTS" ] || { echo "$REQUIREMENTS not found: set the task up first (the eat skill, or ops/fetch_task.sh)" >&2; exit 1; }
+[ -f "$PROJECT_DIR/eat/env.sh" ] && source "$PROJECT_DIR/eat/env.sh"
+export EAT_HOME="$(cd "$SCRIPT_DIR/.." && pwd)" EAT_ROOT="$PROJECT_DIR"
+export TASK="${EAT_TASK:-$(basename "$PROJECT_DIR")}"
+export EAT_RUN="$PROJECT_DIR/eat/log"
+mkdir -p "$EAT_RUN"
+TEAM_OUTPUT="$EAT_RUN/TEAM_OUTPUT.md"
+TEAM_CONFIG="$EAT_RUN/TEAM_CONFIG.md"
+BUDGET_LOG="$EAT_RUN/BUDGET.md"
 CUMULATIVE_COST=0
 MODEL_FIELD=""
 [ -n "${AGENT_MODELS:-}" ] && MODEL_FIELD="**Model:** <one of: ${AGENT_MODELS//,/, }; omit the line for the default, ${ANTHROPIC_MODEL:-the CLI default}>"
@@ -56,7 +64,7 @@ SESSION_ID="${RESUME_SESSION_ID:-$(python3 -c "import uuid; print(uuid.uuid4())"
 cd "$PROJECT_DIR"
 
 # A resumed Claude session reports its total cost so far: book only the increase since that session was last booked
-SUP_BOOKED="$SCRIPT_DIR/.supervisor_booked_cost.json"
+SUP_BOOKED="$EAT_RUN/.supervisor_booked_cost.json"
 session_delta() {
     python3 - "$SUP_BOOKED" "$1" "$2" <<'PY'
 import json, sys
@@ -72,17 +80,6 @@ print(round(max(total - prev, 0.0), 6))
 PY
 }
 
-# Non-kernel tasks have no kernel.cu / kernel.py and describe their
-# starting solution in program.md
-if [ ! -f "tasks/$TASK/kernel.cu" ] && [ ! -f "tasks/$TASK/kernel.py" ]; then
-    TEAM_KIND="an optimization team (see the task requirements below)."
-    FILES_KIND="task files"
-    START_LINE="Current solution: the starting solution in tasks/$TASK/ (see tasks/$TASK/program.md)"
-else
-    TEAM_KIND="a GPU kernel optimization team."
-    FILES_KIND="kernel files"
-    START_LINE="Current kernel.cu: the starter/seed kernel in tasks/$TASK/kernel.cu"
-fi
 
 add_cost() {
     local iter="$1" role="$2" cost="$3" score="${4:-}"
@@ -94,28 +91,10 @@ add_cost() {
 extract_score() {
     local iter_dir="$1"
     python3 -c "
-import re, json, glob, os
-
+import re, os
 official = '$iter_dir/official_eval.txt'
-if os.path.exists(official):
-    m = re.findall(r'mean_vs_base\s*=\s*([\d.]+)|^SCORE:\s*([\d.]+)', open(official).read(), re.M)
-    m = [a or b for a, b in m]
-    if m:
-        print(m[-1]); import sys; sys.exit(0)
-
-# Fall back to agents' JSON outputs (full result text, not truncated)
-for f in sorted(glob.glob('$iter_dir/*_output.json')):
-    try:
-        with open(f) as fh:
-            d = json.load(fh)
-        text = d.get('result', '')
-    except:
-        continue
-    for pattern in [r'mean_vs_base[:\s=]+([\d.]+)', r'combined_score[:\s=]+([\d.]+)', r'vs_base[:\s=]+([\d.]+)', r'[Ss]core[:\s=]+[\d.]+\s*(?:→|->)\s*([\d.]+)', r'[Ss]core[:=]\s*([\d.]+)']:
-        m = re.search(pattern, text, re.IGNORECASE)
-        if m:
-            print(m.group(1)); import sys; sys.exit(0)
-print('N/A')
+m = re.findall(r'^SCORE:\s*([-\d.]+)', open(official).read(), re.M) if os.path.exists(official) else []
+print(m[-1] if m else 'N/A')
 "
 }
 
@@ -150,15 +129,17 @@ except:
 # Build the supervisor system prompt (used once in persistent mode, every time in stateless)
 build_supervisor_system_prompt() {
     cat <<SYSTEM_PROMPT
-You are the supervisor for $TEAM_KIND
-Task: $TASK
+You are the supervisor of an agent team that optimizes a task (its rules are below).
+Task: $TASK (repository: $PROJECT_DIR)
 
-CRITICAL: Your final output MUST end with the ---BEGIN TEAM_CONFIG--- / ---END TEAM_CONFIG--- block in the exact template format shown below. You may read files and run eval commands to inform your decisions, but you MUST NOT spawn agents or modify $FILES_KIND — your ONLY deliverable is the team configuration block. Do NOT skip the template.
+CRITICAL: Your final output MUST end with the ---BEGIN TEAM_CONFIG--- / ---END TEAM_CONFIG--- block in the exact template format shown below. You may read files and run eval commands to inform your decisions, but you MUST NOT spawn agents or modify the task's files — your ONLY deliverable is the team configuration block. Do NOT skip the template.
 
 ## Your instructions
 $(cat "$SCRIPT_DIR/SUPERVISOR.md")
 
-$(cat "$SCRIPT_DIR/requirements/$TASK.md")
+$(cat "$REQUIREMENTS")
+
+The official eval, run by the harness after every team: `bash eat/eval.sh` (its last line is the score).
 
 ## Constraints
 - **Maximum team size: $MAX_TEAM_SIZE agents.** Do not define more than $MAX_TEAM_SIZE roles. If you need more specialization, combine responsibilities into fewer roles.
@@ -174,10 +155,10 @@ build_handover_note() {
 ## Handover
 You are a new supervisor taking over this run at iteration $iter; earlier supervisor sessions ran iterations 1-$((iter - 1)).
 Before you write the team configuration:
-1. Read the record: at least the last three iterations' agent_team/iter_*/team_config.md, tasks/$TASK/results.tsv,
-   agent_team/BUDGET.md, and the agents' notes they point to (tasks/$TASK/work_*/NOTES.md).
+1. Read the record: at least the last three iterations' eat/log/iter_*/team_config.md and official_eval.txt,
+   eat/log/BUDGET.md, the task's results log, and the agents' notes they point to.
 2. Begin the configuration with a "## Reflection" section that assesses the team design itself (roles, team size,
-   phases, how the agents share the eval resources) against the score trajectory in results.tsv, and states what you
+   phases, how the agents share the eval resources) against the score trajectory, and states what you
    keep or change and why. You are not bound by the previous supervisors' team design.
 HANDOVER
 }
@@ -229,7 +210,7 @@ Agents launch in phases. Agents within the same phase run in parallel. Phases ru
 ITER_PROMPT
 }
 
-# Run supervisor and write output to $SCRIPT_DIR/.supervisor_output.json
+# Run supervisor and write output to $EAT_RUN/.supervisor_output.json
 run_supervisor() {
     local iter="$1"
 
@@ -251,13 +232,13 @@ $(build_handover_note "$iter")
 $(build_iter_prompt "$iter")"
             claude --print ${SUPERVISOR_MODEL:+--model "$SUPERVISOR_MODEL"} --dangerously-skip-permissions --output-format json --disallowedTools "Agent,Write,Edit,NotebookEdit${CLAUDE_EXTRA_DISALLOWED:+,$CLAUDE_EXTRA_DISALLOWED}" \
                 --session-id "$SESSION_ID" \
-                < <(printf '%s\n' "$full_prompt") > $SCRIPT_DIR/.supervisor_output.json 2>>"$SCRIPT_DIR/supervisor_stderr.log"
+                < <(printf '%s\n' "$full_prompt") > $EAT_RUN/.supervisor_output.json 2>>"$EAT_RUN/supervisor_stderr.log"
         else
             # Subsequent iterations: resume same session with just the iter prompt
             echo "[supervisor] Resuming persistent session ($SESSION_ID)..."
             claude --print ${SUPERVISOR_MODEL:+--model "$SUPERVISOR_MODEL"} --dangerously-skip-permissions --output-format json --disallowedTools "Agent,Write,Edit,NotebookEdit${CLAUDE_EXTRA_DISALLOWED:+,$CLAUDE_EXTRA_DISALLOWED}" \
                 --resume "$SESSION_ID" \
-                < <(build_iter_prompt "$iter") > $SCRIPT_DIR/.supervisor_output.json 2>>"$SCRIPT_DIR/supervisor_stderr.log"
+                < <(build_iter_prompt "$iter") > $EAT_RUN/.supervisor_output.json 2>>"$EAT_RUN/supervisor_stderr.log"
         fi
     else
         # Stateless: fresh session each time with everything
@@ -267,7 +248,7 @@ $(build_iter_prompt "$iter")"
 
 $(build_iter_prompt "$iter")"
         claude --print ${SUPERVISOR_MODEL:+--model "$SUPERVISOR_MODEL"} --dangerously-skip-permissions --output-format json --disallowedTools "Agent,Write,Edit,NotebookEdit${CLAUDE_EXTRA_DISALLOWED:+,$CLAUDE_EXTRA_DISALLOWED}" \
-            < <(printf '%s\n' "$full_prompt") > $SCRIPT_DIR/.supervisor_output.json 2>>"$SCRIPT_DIR/supervisor_stderr.log"
+            < <(printf '%s\n' "$full_prompt") > $EAT_RUN/.supervisor_output.json 2>>"$EAT_RUN/supervisor_stderr.log"
     fi
 }
 
@@ -306,7 +287,7 @@ if [ ! -f "$TEAM_OUTPUT" ]; then
 Task: $TASK
 No prior team has run yet. This is the first iteration.
 Current best score: N/A (no attempts yet)
-$START_LINE
+Current solution: the start state of the repository (see eat/task.md)
 
 ## Directive
 Start with a solo optimizer.
@@ -341,20 +322,20 @@ for ITER in $(seq "$START_ITER" "$MAX_ITERS"); do
     run_supervisor "$ITER"
 
     # Track supervisor cost
-    SUP_COST=$(extract_cost $SCRIPT_DIR/.supervisor_output.json | tr -d '[:space:]')
+    SUP_COST=$(extract_cost $EAT_RUN/.supervisor_output.json | tr -d '[:space:]')
     [ "$SUPERVISOR_MODE" = "persistent" ] && SUP_COST=$(session_delta "$SESSION_ID" "$SUP_COST")
     add_cost "$ITER" "supervisor" "$SUP_COST"
     TURN_COST="$SUP_COST"
     check_budget || break
 
     # Extract the text from JSON output (take first valid JSON line), fall back to raw
-    python3 "$SCRIPT_DIR/extract_result.py" $SCRIPT_DIR/.supervisor_output.json > $SCRIPT_DIR/.supervisor_raw.txt 2>/dev/null || cp $SCRIPT_DIR/.supervisor_output.json $SCRIPT_DIR/.supervisor_raw.txt
+    python3 "$SCRIPT_DIR/extract_result.py" $EAT_RUN/.supervisor_output.json > $EAT_RUN/.supervisor_raw.txt 2>/dev/null || cp $EAT_RUN/.supervisor_output.json $EAT_RUN/.supervisor_raw.txt
 
     # Extract TEAM_CONFIG block
-    if grep -q "BEGIN TEAM_CONFIG" $SCRIPT_DIR/.supervisor_raw.txt; then
-        sed -n '/---BEGIN TEAM_CONFIG---/,/---END TEAM_CONFIG---/p' $SCRIPT_DIR/.supervisor_raw.txt > "$TEAM_CONFIG"
+    if grep -q "BEGIN TEAM_CONFIG" $EAT_RUN/.supervisor_raw.txt; then
+        sed -n '/---BEGIN TEAM_CONFIG---/,/---END TEAM_CONFIG---/p' $EAT_RUN/.supervisor_raw.txt > "$TEAM_CONFIG"
     else
-        cp $SCRIPT_DIR/.supervisor_raw.txt "$TEAM_CONFIG"
+        cp $EAT_RUN/.supervisor_raw.txt "$TEAM_CONFIG"
     fi
 
     # Retry up to 5 times if no roles found (supervisor didn't follow template)
@@ -403,23 +384,23 @@ RETRY_PROMPT
         if [ "$SUPERVISOR_MODE" = "persistent" ]; then
             claude --print ${SUPERVISOR_MODEL:+--model "$SUPERVISOR_MODEL"} --dangerously-skip-permissions --output-format json --disallowedTools "Agent,Write,Edit,NotebookEdit${CLAUDE_EXTRA_DISALLOWED:+,$CLAUDE_EXTRA_DISALLOWED}" \
                 --resume "$SESSION_ID" \
-                < <(printf '%s\n' "$RETRY_PROMPT") > $SCRIPT_DIR/.supervisor_retry.json 2>>"$SCRIPT_DIR/supervisor_stderr.log"
+                < <(printf '%s\n' "$RETRY_PROMPT") > $EAT_RUN/.supervisor_retry.json 2>>"$EAT_RUN/supervisor_stderr.log"
         else
             claude --print ${SUPERVISOR_MODEL:+--model "$SUPERVISOR_MODEL"} --dangerously-skip-permissions --output-format json --disallowedTools "Agent,Write,Edit,NotebookEdit${CLAUDE_EXTRA_DISALLOWED:+,$CLAUDE_EXTRA_DISALLOWED}" \
-                < <(printf '%s\n' "$RETRY_PROMPT") > $SCRIPT_DIR/.supervisor_retry.json 2>>"$SCRIPT_DIR/supervisor_stderr.log"
+                < <(printf '%s\n' "$RETRY_PROMPT") > $EAT_RUN/.supervisor_retry.json 2>>"$EAT_RUN/supervisor_stderr.log"
         fi
 
-        RETRY_COST=$(extract_cost $SCRIPT_DIR/.supervisor_retry.json | tr -d '[:space:]')
+        RETRY_COST=$(extract_cost $EAT_RUN/.supervisor_retry.json | tr -d '[:space:]')
         [ "$SUPERVISOR_MODE" = "persistent" ] && RETRY_COST=$(session_delta "$SESSION_ID" "$RETRY_COST")
         add_cost "$ITER" "supervisor-retry-$RETRY" "$RETRY_COST"
         TURN_COST=$(python3 -c "print(${TURN_COST:-0} + ${RETRY_COST:-0})")
         check_budget || break 2
 
-        python3 "$SCRIPT_DIR/extract_result.py" $SCRIPT_DIR/.supervisor_retry.json > $SCRIPT_DIR/.supervisor_retry_raw.txt 2>/dev/null
-        if grep -q "BEGIN TEAM_CONFIG" $SCRIPT_DIR/.supervisor_retry_raw.txt; then
-            sed -n '/---BEGIN TEAM_CONFIG---/,/---END TEAM_CONFIG---/p' $SCRIPT_DIR/.supervisor_retry_raw.txt > "$TEAM_CONFIG"
+        python3 "$SCRIPT_DIR/extract_result.py" $EAT_RUN/.supervisor_retry.json > $EAT_RUN/.supervisor_retry_raw.txt 2>/dev/null
+        if grep -q "BEGIN TEAM_CONFIG" $EAT_RUN/.supervisor_retry_raw.txt; then
+            sed -n '/---BEGIN TEAM_CONFIG---/,/---END TEAM_CONFIG---/p' $EAT_RUN/.supervisor_retry_raw.txt > "$TEAM_CONFIG"
         else
-            cp $SCRIPT_DIR/.supervisor_retry_raw.txt "$TEAM_CONFIG"
+            cp $EAT_RUN/.supervisor_retry_raw.txt "$TEAM_CONFIG"
         fi
         echo "[supervisor] Retry $RETRY config written to $TEAM_CONFIG"
     done
@@ -429,10 +410,10 @@ RETRY_PROMPT
 
     # ---- LAUNCH TEAM ----
     echo "[team] Launching team for iteration $ITER..."
-    TEAM_COST=$(bash "$SCRIPT_DIR/launch_team.sh" "$TASK" "$ITER" "$TEAM_CONFIG" "$TEAM_OUTPUT" "$MAX_TEAM_SIZE" | tr -d '[:space:]')
+    TEAM_COST=$(bash "$SCRIPT_DIR/launch_team.sh" "$ITER" "$TEAM_CONFIG" "$TEAM_OUTPUT" "$MAX_TEAM_SIZE" | tr -d '[:space:]')
 
     # Extract score from agent JSON outputs
-    CURRENT_SCORE=$(extract_score "$PROJECT_DIR/agent_team/iter_${ITER}")
+    CURRENT_SCORE=$(extract_score "$EAT_RUN/iter_${ITER}")
     echo "[score] Iteration $ITER score: $CURRENT_SCORE"
 
     add_cost "$ITER" "team" "$TEAM_COST" "$CURRENT_SCORE"

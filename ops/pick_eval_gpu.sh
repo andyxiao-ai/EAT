@@ -4,7 +4,7 @@
 # least-busy allowed GPU. On AMD, HIP and rocm-smi numbering can differ: set EAT_ROCM_MAP="hip:rocm ..." (e.g. "0:3 3:1"),
 # matched by PCI bus; unmapped indices are taken as equal.
 MAX_WAIT=${MAX_WAIT:-1800}
-read -r -a ORDER <<<"${EAT_GPUS:-0}"
+read -r -a ORDER <<<"${EAT_GPUS//,/ }"; [ ${#ORDER[@]} -gt 0 ] || ORDER=(0)
 declare -A ROCM=()
 for p in ${EAT_ROCM_MAP:-}; do ROCM[${p%%:*}]=${p##*:}; done
 

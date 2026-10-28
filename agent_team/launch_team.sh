@@ -2,7 +2,8 @@
 # Launch a team of Claude agents based on TEAM_CONFIG.md
 # Called by launch_stateless.sh — not meant to be run directly.
 #
-# Usage: bash launch_team.sh <task> <iteration> <team_config_path> <team_output_path> [max_team_size]
+# Usage: bash launch_team.sh <iteration> <team_config_path> <team_output_path> [max_team_size]
+# Environment (set by launch_stateless.sh): TASK, EAT_ROOT (the task repository), EAT_RUN (its eat/log/)
 # Stdout: total team cost (float) — captured by launch_stateless.sh
 # All logging goes to stderr so stdout is clean for the cost value.
 
@@ -10,17 +11,16 @@ set -euo pipefail
 
 unset ANTHROPIC_API_KEY
 
-TASK="$1"
-ITER="$2"
-TEAM_CONFIG="$3"
-TEAM_OUTPUT="$4"
-MAX_TEAM_SIZE="${5:-3}"
-PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+ITER="$1"
+TEAM_CONFIG="$2"
+TEAM_OUTPUT="$3"
+MAX_TEAM_SIZE="${4:-3}"
+PROJECT_DIR="$EAT_ROOT"
 
 cd "$PROJECT_DIR"
 
 # Create a workspace for this iteration's outputs
-ITER_DIR="$PROJECT_DIR/agent_team/iter_${ITER}"
+ITER_DIR="$EAT_RUN/iter_${ITER}"
 mkdir -p "$ITER_DIR"
 cp "$TEAM_CONFIG" "$ITER_DIR/team_config.md"
 
@@ -108,10 +108,8 @@ set -e
 
 echo "[launch_team] All phases finished." >&2
 
-# Official score of the kernel the team left in place, independent of agents' self-reports.
-# Override EVAL_CMD to pick a GPU or activate an environment, e.g.
-#   EVAL_CMD='source $EAT_VENV/bin/activate && HIP_VISIBLE_DEVICES=$(ops/pick_eval_gpu.sh) python tools/eval_<task>.py'
-EVAL_CMD="${EVAL_CMD:-python tools/eval_${TASK}.py}"
+# Official score of what the team left in place, independent of agents' self-reports
+EVAL_CMD="${EVAL_CMD:-bash eat/eval.sh}"
 echo "[launch_team] Official eval: $EVAL_CMD" >&2
 bash -c "$EVAL_CMD" > "$ITER_DIR/official_eval.txt" 2>&1 || true
 
@@ -145,8 +143,8 @@ echo "[launch_team] Team cost for iteration $ITER: \$$TEAM_TOTAL_COST" >&2
     tail -25 "$ITER_DIR/official_eval.txt"
     echo ""
 
-    if [ -f "$SCRIPT_DIR/OPERATOR_NOTES.md" ]; then
-        cat "$SCRIPT_DIR/OPERATOR_NOTES.md"
+    if [ -f "$EAT_RUN/OPERATOR_NOTES.md" ]; then
+        cat "$EAT_RUN/OPERATOR_NOTES.md"
         echo ""
     fi
 
@@ -177,23 +175,9 @@ for line in lines[-80:]:
         echo ""
     done
 
-    if [ -d "tasks/$TASK/policy" ]; then
-        echo "## Current policy entry point (first 50 lines)"
-        head -50 "tasks/$TASK/policy/__init__.py" 2>/dev/null || echo "(not found)"
-    elif [ -f "tasks/$TASK/official_eval.sh" ]; then
-        echo "## Current official eval entry point (first 50 lines)"
-        head -50 "tasks/$TASK/official_eval.sh"
-    else
-        echo "## Current kernel.cu (first 50 lines)"
-        head -50 "tasks/$TASK/kernel.cu" 2>/dev/null || echo "(not found)"
-    fi
+    echo "## Score History (official eval after each team)"
+    grep -E "^\| [0-9]+ \| team \|" "$EAT_RUN/BUDGET.md" 2>/dev/null | awk -F'|' '{print "iteration" $2 "score" $6}' || true
     echo ""
-
-    if [ -f "tasks/$TASK/results.tsv" ]; then
-        echo "## Results History"
-        cat "tasks/$TASK/results.tsv"
-        echo ""
-    fi
 
 } > "$TEAM_OUTPUT"
 

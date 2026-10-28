@@ -26,7 +26,7 @@ def git_log():
 
 
 budget = {}
-for line in open(f"{REPO}/agent_team/BUDGET.md"):
+for line in open(f"{REPO}/eat/log/BUDGET.md"):
     m = re.match(r"\|\s*(\d+)\s*\|\s*(supervisor|team)\s*\|\s*([\d.]+)\s*\|\s*([\d.]+)\s*\|\s*([\d.]*)\s*\|", line)
     if m and int(m.group(1)) >= FIRST:
         budget.setdefault(int(m.group(1)), {})[m.group(2)] = (float(m.group(4)), float(m.group(5)) if m.group(5) else None)
@@ -37,7 +37,7 @@ ends = {int(m.group(1)): ts for ts, msg in log if (m := re.match(r"iter (\d+): "
 
 iters = []
 for n in sorted(set(budget) | {int(k) for k in roles if int(k) >= FIRST}):
-    cfg = f"{REPO}/agent_team/iter_{n}/team_config.md"
+    cfg = f"{REPO}/eat/log/iter_{n}/team_config.md"
     team_start = datetime.fromtimestamp(os.path.getmtime(cfg)).replace(microsecond=0).isoformat() if os.path.exists(cfg) else None
     b = budget.get(n, {})
     iters.append(dict(n=n, roles=roles.get(str(n), "").split(), team_start=team_start, end=ends.get(n),

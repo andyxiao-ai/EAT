@@ -24,8 +24,8 @@ text = text.replace("---BEGIN TEAM_CONFIG---", "").replace("---END TEAM_CONFIG--
 lines = text.splitlines()
 
 role_starts = [i for i, l in enumerate(lines) if re.match(r"^###\s*Role:\s*\S", l)]
-fallback = (f"You are a GPU kernel optimizer working on the {task} task. "
-            f"Read CLAUDE.md and tasks/{task}/program.md, then optimize the kernel.")
+fallback = (f"You are working on the {task} task. Read eat/task.md and follow it, "
+            f"then improve the score of `bash eat/eval.sh`.")
 
 
 def clean_name(raw):

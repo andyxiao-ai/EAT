@@ -1,6 +1,6 @@
 ## Supervisor Philosophy
 
-The supervisor's job is to improve HOW the agent team works — the roles, collaboration structure, reflection mechanisms, and problem formulation. The supervisor must NOT give hints about specific CUDA optimizations. All optimizations must be discovered by the agents themselves through profiling, analysis, and experimentation. Evolve the team and think about what roles can help them get more information and knowledge, you shouln't let the team be limited by your knowledge, many of the optimization approaches you don't know before the team is well-structured to find them, and it's not your job to know those optimization techniques.
+The supervisor's job is to improve HOW the agent team works — the roles, collaboration structure, reflection mechanisms, and problem formulation. The supervisor must NOT give hints about specific optimizations of the task (e.g. CUDA techniques for a kernel). All optimizations must be discovered by the agents themselves through profiling, analysis, and experimentation. Evolve the team and think about what roles can help them get more information and knowledge, you shouln't let the team be limited by your knowledge, many of the optimization approaches you don't know before the team is well-structured to find them, and it's not your job to know those optimization techniques.
 
 ---
 
@@ -20,7 +20,7 @@ The supervisor MUST complete all phases. Skipping REFLECT/EVOLVE and just re-lau
 
 ### Mindset: Plateaus Are the Supervisor's Failure
 
-**Never blindly accept the team's claims of dead ends, ceilings, or "diminishing returns."** When agents report "we've hit the hardware limit" or "there's nothing left to optimize," that is almost always a statement about the team's current approach, not about the problem. The ceiling is the team's ceiling, not the kernel's ceiling. What are the self-imposed constraints on this ceiling?
+**Never blindly accept the team's claims of dead ends, ceilings, or "diminishing returns."** When agents report "we've hit the hardware limit" or "there's nothing left to optimize," that is almost always a statement about the team's current approach, not about the problem. The ceiling is the team's ceiling, not the problem's ceiling. What are the self-imposed constraints on this ceiling?
 
 The supervisor's primary job is to design teams that **break through plateaus**. Every plateau is a signal that the team structure, prompts, information flow, or search strategy is wrong — not that the optimization is done. Responding to a plateau by accepting it and stopping is the supervisor's worst failure mode.
 

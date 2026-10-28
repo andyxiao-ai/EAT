@@ -1,8 +1,8 @@
-"""Independent re-run of iteration N's committed kernel on an idle allowed GPU: three official evals plus the task's
-optional extra check (EAT_VERIFY_EXTRA, a shell command that must print "ALL PASS"). Passing reads are appended to
-$EAT_WORK/verified_auto.json at the time of N's last ship.
+"""Independent re-run of iteration N's committed state: three official evals (`bash eat/eval.sh` in a worktree of the
+iteration's commit) plus the task's optional extra check (EAT_VERIFY_EXTRA, a shell command that must print "ALL PASS").
+Passing reads are appended to $EAT_WORK/verified_auto.json at the time of N's last ship.
 
-Usage: python ops/verify_iter.py N   (reads EAT_ROOT, EAT_TASK, EAT_WORK, EAT_VENV, EAT_CACHE from ops/env.sh)
+Usage: python ops/verify_iter.py N   (from the task repository; reads EAT_ROOT and EAT_WORK from ops/env.sh)
 """
 
 import json
@@ -13,12 +13,9 @@ import sys
 
 N = int(sys.argv[1])
 REPO = os.environ["EAT_ROOT"]
-TASK = os.environ["EAT_TASK"]
 WORK = os.environ["EAT_WORK"]
 OUT = f"{WORK}/verified_auto.json"
 WT = f"{WORK}/verify_auto{N}"
-ENV = (f"source {os.environ['EAT_VENV']}/bin/activate && export TRITON_CACHE_DIR={os.environ['EAT_CACHE']}/triton"
-       f" && G=$(MAX_WAIT=1800 {REPO}/ops/pick_eval_gpu.sh) && echo GPU=$G && export HIP_VISIBLE_DEVICES=$G CUDA_VISIBLE_DEVICES=$G")
 EXTRA = os.environ.get("EAT_VERIFY_EXTRA", "")
 
 
@@ -32,20 +29,18 @@ ships = [line.split("|")[1][:19].replace(" ", "T") for line in log if re.search(
 end = next(line.split("|")[1][:19].replace(" ", "T") for line in log if re.search(rf"\|iter {N}: ", line))
 t = max(ships) if ships else end
 
-# Untracked prebuilt baselines (e.g. sota/*.so) are copied into the worktree.
-sh(f"git -C {REPO} worktree remove --force {WT} 2>/dev/null; git -C {REPO} worktree add -q --detach {WT} {commit} && "
-   f"for f in {REPO}/tasks/{TASK}/sota/*.so; do [ -e \"$f\" ] && cp \"$f\" {WT}/tasks/{TASK}/sota/; done")
+sh(f"git -C {REPO} worktree remove --force {WT} 2>/dev/null; git -C {REPO} worktree add -q --detach {WT} {commit}")
 reads, ok = [], True
 for _ in range(3):
-    out = sh(f"cd {WT} && {ENV} && python tools/eval_{TASK}.py")
-    m = re.search(r"mean_vs_base = ([\d.]+)", out)
-    passed = bool(re.search(r"SUMMARY: (\d+)/\1 workloads passed", out))
-    ok &= bool(m) and passed
-    if m:
-        reads.append(float(m.group(1)))
-    print(re.findall(r"GPU=\d+", out), "passed" if passed else "FAILED", m.group(1) if m else None)
+    out = sh(f"cd {WT} && EAT_ROOT={WT} bash eat/eval.sh")
+    m = re.findall(r"^SCORE:\s*([-\d.]+)", out, re.M)
+    score = float(m[-1]) if m else 0.0
+    ok &= score > 0
+    if score > 0:
+        reads.append(score)
+    print("score", m[-1] if m else None)
 if EXTRA:
-    extra = sh(f"cd {WT} && {ENV} && {EXTRA}")
+    extra = sh(f"cd {WT} && export EAT_ROOT={WT} && {EXTRA}")
     ok &= "ALL PASS" in extra
     print("extra check", "ALL PASS" if "ALL PASS" in extra else "FAILED")
 sh(f"git -C {REPO} worktree remove --force {WT}")
