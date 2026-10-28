@@ -48,17 +48,10 @@ distinct roles, from a single `solo_optimizer` to an `energy_auditor` and a `lan
 
 <p align="center"><img alt="Team composition per iteration of the MI350X run" src="assets/eat_team_evolution.png" width="100%"></p>
 
-**How the B200 run went past the best published kernel in four iterations.** Each row is one iteration: the
-supervisor's diagnosis of the previous team (quoted from its `EVOLUTION_HISTORY.md`), the team it built in response,
-and the official score that team reached.
+**The B200 run passed the best published kernel in four iterations**, each one a team rebuilt around the
+supervisor's diagnosis of the last:
 
-| iter | the supervisor's diagnosis of the previous team | team it designed | score |
-|:-:|---|---|:-:|
-| 1 | | `solo_optimizer` | 2.19× |
-| 2 | *"Plateau cause = team structure: one agent, anchored on an inherited 2.5k-line generated kernel, so every idea was a patch to its fixed decomposition."* | `architect` · `incumbent_optimizer` · `hw_analyst` | 2.34× |
-| 3 | *"The dynamic instruction count is the unattacked term: no role does SASS-level accounting."* Also: *"Early stopping is a repeat pattern."* | `integrator` · **`issue_economist`** (new) · `analyst`, plus a no-early-stop rule | **2.94×** |
-| 4 | *"A classic local optimum of the fused CAKE structure ... Nobody re-examined the fused-kernel structure itself."* | `integrator` · **`architect`** (must first diagnose why the iteration-2 design missed by 3×) · `analyst` | **3.14×**, past the best published result (KDA², 2.96× on B300) |
-| 5 | *"The largest measured slack is the prep work per token (work pass, Akk); no role owns reducing it."* | `integrator` · **`prep_architect`** · **`robustness_analyst`** | 3.24× |
+<p align="center"><img alt="B200 run, iterations 1-5: the supervisor's diagnosis, the team it designed, and the score" src="assets/eat_b200_teams.png" width="100%"></p>
 
 The same pattern appears late in long runs. In the MI350X run, iterations 57 and 58 shipped nothing; the
 supervisor found that the team had been timing its ideas in a different regime from the eval, and wrote a new role
