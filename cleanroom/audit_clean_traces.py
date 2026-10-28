@@ -8,25 +8,28 @@ Scans every tool call in every transcript (supervisor, team agents, subagents) f
 Prints a summary and writes every hit, with its transcript and line, to the report file.
 
 Usage: python cleanroom/audit_clean_traces.py [REPORT]
-Environment: EAT_CLEAN, EAT_TASK, EAT_ALLOWED_RO (as for sandbox.sh), EAT_FORBIDDEN_RE.
+Environment: EAT_CLEAN, EAT_ROOT (default: the current git repository), EAT_ALLOWED_RO (as for sandbox.sh),
+EAT_FORBIDDEN_RE (forbidden implementations), EAT_EVAL_INTERNAL_RE (the eval's hidden parts; default: held-out).
 """
 
 import json
 import os
 import re
+import subprocess
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
 C = os.environ["EAT_CLEAN"]
-TASK = os.environ["EAT_TASK"]
-PROJ = Path(C) / "claude-config/projects" / re.sub(r"[^A-Za-z0-9]", "-", f"{C}/k-search-v2")
+ROOT = os.environ.get("EAT_ROOT") or subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip()
+HOME = str(Path(__file__).resolve().parent.parent)
+PROJ = Path(C) / "claude-config/projects" / re.sub(r"[^A-Za-z0-9]", "-", ROOT)
 REPORT = Path(sys.argv[1] if len(sys.argv) > 1 else f"{C}/run/clean_trace_audit.txt")
 
 ALLOWED_ROOTS = tuple(
-    [C + "/k-search-v2", C + "/venv", C + "/home", C + "/tmp", C + "/run", C + "/bin"]
+    [ROOT, HOME, C + "/home", C + "/tmp", C + "/run", C + "/sbin"]
     + os.environ.get("EAT_ALLOWED_RO", "").split()
-    + [os.environ.get("EAT_LOCKS", "/nonexistent"), "/usr", "/tmp", "/dev", "/proc", "/sys", "/etc", "/bin", "/lib",
+    + [os.environ.get("EAT_LOCKS", C + "/locks"), "/usr", "/tmp", "/dev", "/proc", "/sys", "/etc", "/bin", "/lib",
        "/opt/nvidia", "/usr/local/cuda"]
 )
 
@@ -35,10 +38,10 @@ NET = re.compile(r"\b(curl|wget|pip3?\s+(install|download)|uv\s+(pip|add)|conda\
                  r"https?://(?!127\.0\.0\.1|localhost)")
 FORBIDDEN = re.compile(
     os.environ.get("EAT_FORBIDDEN_RE", r"(?!x)x")
-    + rf"|k-search-v2/tasks/(?!{TASK})|claude-config/projects/(?!{PROJ.name})"
-    + rf"|{re.escape(C)}/k-search-v2/\.git/(?!HEAD)|git\s+(log|show)\s+--all|reflog",
+    + rf"|claude-config/projects/(?!{PROJ.name})"
+    + rf"|{re.escape(ROOT)}/\.git/(?!HEAD)|git\s+(log|show)\s+--all|reflog",
     re.I)
-EVAL_INTERNAL = re.compile(rf"held[-_ ]?out|HELDOUT|SEED|eval_{TASK}\.py", re.I)
+EVAL_INTERNAL = re.compile(os.environ.get("EAT_EVAL_INTERNAL_RE", r"held[-_ ]?out"), re.I)
 PATH = re.compile(r"(?<![\w.])/(?:ssd\d|home|root|data|mnt|opt|var|srv|scratch|nfs|raid|workspace)[^\s'\"`;|&)<>,]*")
 
 

@@ -53,4 +53,4 @@ only_forbidden = [l for l in cand if l in forbidden and l not in allowed]
 print(f"candidate lines {len(cand)}; in allowed sources {sum(l in allowed for l in cand)}; "
       f"in forbidden sources {sum(l in forbidden for l in cand)}; forbidden-only {len(only_forbidden)}")
 for l in only_forbidden[:40]:
-    print(f"  {cand[l].split('/tasks/')[-1]}  <=  {forbidden[l]}\n      {l[:160]}")
+    print(f"  {cand[l]}  <=  {forbidden[l]}\n      {l[:160]}")

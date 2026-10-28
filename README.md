@@ -142,10 +142,19 @@ while budget remains:
 
 ## Clean-room runs
 
-To show that a result was not copied from code released after a cutoff, run the whole loop inside
-`cleanroom/sandbox.sh` with only pre-cutoff sources mounted (`EAT_ALLOWED_RO`), web tools disabled
-(`CLAUDE_EXTRA_DISALLOWED=WebSearch,WebFetch`) and network limited to the Anthropic API by the proxy; then audit
-the transcripts and the produced code with `cleanroom/audit_*.py`.
+To show that a result was not copied from code released after a cutoff, run the whole loop inside the
+[bubblewrap](https://github.com/containers/bubblewrap) sandbox, from the task repository:
+
+```bash
+EAT_CLEAN=/path/to/sandbox-state EAT_ALLOWED_RO="/refs/cutlass /refs/flashinfer-2026-08-13" EAT_GPUS="0 1" \
+CLAUDE_EXTRA_DISALLOWED=WebSearch,WebFetch $EAT_HOME/cleanroom/sandbox.sh \
+    bash $EAT_HOME/agent_team/launch_stateless.sh --persistent 50 3 300
+```
+
+Only the task repository, EAT, and the `EAT_ALLOWED_RO` sources are visible, and the network reaches only the
+Anthropic API (through `allowlist_proxy.py`, which logs every request). Afterwards,
+`cleanroom/audit_clean_traces.py` scans every tool call in the run's transcripts for web use, network commands and
+forbidden sources, and `cleanroom/audit_code_overlap.py` finds code lines that appear only in the forbidden sources.
 
 ## For coding agents
 
