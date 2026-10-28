@@ -13,6 +13,7 @@
   <a href="https://huggingface.co/datasets/eva98/eat-gym"><img alt="EAT Gym" src="https://img.shields.io/badge/%F0%9F%A4%97%20EAT%20Gym-tasks-E8A12E?style=flat-square&labelColor=0E1A2B"></a>
   <a href="https://huggingface.co/datasets/eva98/eat-evolution-traces"><img alt="Traces" src="https://img.shields.io/badge/%F0%9F%A4%97%20Traces-agent%20transcripts-E8A12E?style=flat-square&labelColor=0E1A2B"></a>
   <a href="https://github.com/caoshiyi/eat-kernels"><img alt="Kernels" src="https://img.shields.io/badge/Kernels-eat--kernels-E8A12E?style=flat-square&logo=github&logoColor=white&labelColor=0E1A2B"></a>
+  <a href="https://github.com/caoshiyi/eat-robodojo-policy"><img alt="Robot policy" src="https://img.shields.io/badge/Policy-eat--robodojo--policy-E8A12E?style=flat-square&logo=github&logoColor=white&labelColor=0E1A2B"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-Apache--2.0-5C7FA3?style=flat-square&labelColor=0E1A2B"></a>
 </p>
 
@@ -74,7 +75,8 @@ the [traces](https://huggingface.co/datasets/eva98/eat-evolution-traces).
 
 The starting policy is the Pi_05 VLA. The EAT team replaced it with Python code that calls the frozen Pi_05 and, at
 runtime, Claude, and raised RoboDojo's leaderboard score from 11.4 to **62.1 on held-out seeds, above every entry on
-the leaderboard (55.3, Oct 26, 2026)**. Same scene, left: Pi_05; right: the team's code policy.
+the leaderboard (55.3, Oct 26, 2026)**. Same scene, left: Pi_05; right: the team's code policy
+([eat-robodojo-policy](https://github.com/caoshiyi/eat-robodojo-policy)).
 
 <p align="center"><img alt="RoboDojo make_kong: Pi_05 vs. the EAT code policy" src="assets/robodojo_make_kong.gif" width="100%"></p>
 <p align="center"><sub><code>make_kong</code> (Mahjong): task score 16.7 → 97.2. <a href="assets/robodojo_make_kong.mp4">Full video</a></sub></p>
@@ -109,7 +111,8 @@ the recorded sessions. (d) RoboDojo: dev (seed 1) and held-out (seeds 0, 2) scor
 Oct 26, 2026.</sub></p>
 
 **Everything is released.** The kernels, packaged for inference engines (vLLM-style serving interface with paged state
-and prefix-cache checkpoints): [eat-kernels](https://github.com/caoshiyi/eat-kernels). Every supervisor and agent
+and prefix-cache checkpoints): [eat-kernels](https://github.com/caoshiyi/eat-kernels). The RoboDojo policy, with its eval fleet setup:
+[eat-robodojo-policy](https://github.com/caoshiyi/eat-robodojo-policy). Every supervisor and agent
 transcript, team config, note and per-iteration kernel or policy:
 [eva98/eat-evolution-traces](https://huggingface.co/datasets/eva98/eat-evolution-traces). The tasks, at the state each
 run started from: [EAT Gym](https://huggingface.co/datasets/eva98/eat-gym).
