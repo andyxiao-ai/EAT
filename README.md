@@ -140,51 +140,6 @@ while budget remains:
     harness:     launch the team's agents phase by phase -> run the official eval -> record cost and score
 ```
 
-## What a task provides
-
-Any git repository becomes an EAT task with three files:
-
-```
-eat/task.md    the rules the supervisor puts into every agent's prompt: task, goal, eval, files, resources, limits
-eat/eval.sh    the official eval of the committed state; prints "SCORE: <x>" (higher is better, 0 if incorrect)
-eat/env.sh     optional: sourced before anything runs (venv, paths, EAT_GPUS)
-```
-
-The harness runs from inside the repository, keeps the run's record in `eat/log/` (team configs, every agent's prompt
-and output, the official eval of each iteration, `BUDGET.md`) and commits each iteration as
-`iter <n>: ... score=<x>`. Agents run with `--dangerously-skip-permissions`: run on a machine (or in
-`cleanroom/sandbox.sh`) where that is acceptable.
-
-The [EAT Gym](https://huggingface.co/datasets/eva98/eat-gym) holds the tasks of the paper in this form (and in the
-[Harbor](https://harborframework.com) task format, so they also run with any Harbor agent), each at the state an EAT
-run started from. `bash ops/fetch_task.sh <task> <dir> --setup` installs one as its own repository.
-
-## Running by hand
-
-```bash
-cd <task repository>                               # EAT_HOME: your EAT checkout
-bash eat/eval.sh                                   # the starting score
-tmux new-session -d -s eat_run "EAT_GPUS='0 1' bash $EAT_HOME/agent_team/launch_stateless.sh \
-    --persistent 50 3 300 2>&1 | tee -a .work/eat.log"   # 50 iterations, teams of up to 3, $300
-```
-
-Arguments: `--persistent` (one supervisor session for the whole run) or `--stateless` (a new one every iteration),
-max iterations, max team size, budget in dollars, first iteration (to resume). Optional settings (environment):
-
-| variable | effect |
-|---|---|
-| `SUPERVISOR_MODEL` | model of the supervisor session (default: the CLI default) |
-| `AGENT_MODELS` | comma-separated models a role may pick with a `**Model:**` line in the team config; roles without one use the default model |
-| `SUPERVISOR_REFRESH_COST` | persistent mode: after a supervisor turn (with its retries) that cost more than this many dollars, the next iteration starts a new supervisor session with a handover note telling it to read the record and reassess the team design (default: off) |
-| `RESUME_SESSION_ID` | persistent mode: continue this supervisor session (with the first iteration as the last argument) |
-| `EAT_PAUSE_FILE` | wait before each iteration while this file exists (e.g. while you run a held-out eval) |
-| `AGENT_TIMEOUT_ENFORCE` | `1`: stop an agent at its role's `**Timeout:**` |
-| `CLAUDE_EXTRA_DISALLOWED` | extra tools to disable for every session (`WebSearch,WebFetch` for clean-room runs) |
-
-An agent that is stopped is resumed once for a final report (so its findings and its cost are recorded), and
-background processes it left running are stopped. A resumed persistent supervisor session is booked only for the cost
-added since it was last booked.
-
 ## Clean-room runs
 
 To show that a result was not copied from code released after a cutoff, run the whole loop inside
