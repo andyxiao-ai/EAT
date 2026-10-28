@@ -84,30 +84,15 @@ the leaderboard (55.3, Oct 26, 2026)**. Same scene, left: Pi_05; right: the team
 </tr>
 </table>
 
-## Results
+## Everything is released
 
-| task | hardware | start | EAT |
-|---|---|---|---|
-| Kimi Delta Attention prefill | AMD MI350X | vLLM ROCm KDA kernels | **3.01×** mean speedup (independently verified); the serving kernel built from it: 3.04× prefill, 1.69× decode |
-| Kimi Delta Attention prefill, **clean room** | NVIDIA B200 | FlashKDA | **3.44×** on the Int21 workloads; the serving kernel: **2.57×** on 26 serving workloads (2.40× with fp32 checkpoints) |
-| MoE expert offload: Qwen3.8-Flash-Next, 79 GB, MLX 4-bit | Apple M4 Pro, 48 GB | naive offload engine | **3.32×** faster on recorded coding-agent sessions; batch-1 decode 13.4 → 30.3 tokens/s (with a second run) |
-| RoboDojo code policy, 42 tasks | 4-8 AWS g6e (L40S) | Pi_05 (11.44) | **62.08** on held-out seeds (leaderboard #1: 55.3) |
-
-Kernel speedups are geomeans from each task's official eval, with correctness as a hard gate. The B200 run was a clean
-room: no network beyond the model API, and no KDA kernel newer than its FlashInfer starting snapshot.
-
-<p align="center"><img alt="Full runs on four settings" src="assets/fig_new_domains.png" width="100%"></p>
-<p align="center"><sub>Score at the end of each iteration, from the paper (Figure 7). (a) MI350X, from a port of vLLM's
-kernels. (b) B200, from a port of FlashInfer's KDA kernels. (c) MoE offload from the naive engine; star: final engine on
-the recorded sessions. (d) RoboDojo: dev (seed 1) and held-out (seeds 0, 2) scores, with leaderboard references as of
-Oct 26, 2026.</sub></p>
-
-**Everything is released.** The kernels, packaged for inference engines (vLLM-style serving interface with paged state
-and prefix-cache checkpoints): [eat-kernels](https://github.com/caoshiyi/eat-kernels). The RoboDojo policy, with its eval fleet setup:
-[eat-robodojo-policy](https://github.com/caoshiyi/eat-robodojo-policy). Every supervisor and agent
-transcript, team config, note and per-iteration kernel or policy:
-[eva98/eat-evolution-traces](https://huggingface.co/datasets/eva98/eat-evolution-traces). The tasks, at the state each
-run started from: [EAT Gym](https://huggingface.co/datasets/eva98/eat-gym).
+- **Kernels**, packaged for inference engines (vLLM-style serving interface with paged state and prefix-cache
+  checkpoints; MI350X 3.04× prefill and 1.69× decode, B200 2.57× on 26 serving workloads):
+  [eat-kernels](https://github.com/caoshiyi/eat-kernels).
+- **The RoboDojo policy**, with its eval fleet setup: [eat-robodojo-policy](https://github.com/caoshiyi/eat-robodojo-policy).
+- **Every supervisor and agent transcript**, team config, note and per-iteration kernel or policy:
+  [eva98/eat-evolution-traces](https://huggingface.co/datasets/eva98/eat-evolution-traces).
+- **The tasks**, at the state each run started from: [EAT Gym](https://huggingface.co/datasets/eva98/eat-gym).
 
 ## How it works
 
