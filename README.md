@@ -91,13 +91,11 @@ the leaderboard (55.3, Oct 26, 2026)**. Same scene, left: Pi_05; right: the team
 The model does not fit in the Mac's memory, so its experts stream from the SSD. An EAT team wrote the offload engine,
 starting from a naive port. On an Apple M4 Pro with 48 GB:
 
-- **GGUF UD-IQ4_XS:** on a speed suite with prompts up to 256K tokens, the engine scores **3.05× Strata** (Splash
-  1.4.0: 2.03×). After a 256K-token prompt it still decodes at **33.6 tokens/s**, against 10.3 for Strata and 9.3
-  for Splash. On recorded coding-agent sessions replayed through each engine's API, it is **1.17× faster than Splash**.
-- **MLX 4-bit:** on recorded coding-agent sessions it is **3.32× faster than the naive engine** (batch-1 decode
-  13.4 → 30.3 tokens/s).
+- **GGUF UD-IQ4_XS**, against Strata on the same file (both with MTP speculation): decode **31.1 vs 15.3 tokens/s**;
+  after a 256K-token prompt, decode **33.6 vs 12.4 tokens/s** and prefill **352 vs 113 tokens/s**.
+- **MLX 4-bit**, against the naive engine: batch-1 decode **30.3 vs 13.4 tokens/s**.
 
-<p align="center"><img alt="Qwen3.8-Flash-Next on an M4 Pro: EAT's engine vs Strata, Splash and the naive engine" src="assets/eat_mac_serving.png" width="100%"></p>
+<p align="center"><img alt="Qwen3.8-Flash-Next on an M4 Pro: EAT's engine vs Strata and the naive engine, tokens/s" src="assets/eat_mac_serving.png" width="100%"></p>
 
 **Coming soon:** serving on an Apple M5 Pro.
 
