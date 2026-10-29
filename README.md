@@ -86,11 +86,20 @@ the leaderboard (55.3, Oct 26, 2026)**. Same scene, left: Pi_05; right: the team
 </tr>
 </table>
 
-### Coming soon: Qwen3.8-Flash-Next serving on an Apple M5 Pro
+### Qwen3.8-Flash-Next served from a 48 GB Mac
 
-A frontier MoE model served from a laptop, with the expert-offload engine written by an EAT team. On an M4 Pro with 48 GB,
-the team's engine is 3.32× faster than the naive offload engine on recorded coding-agent sessions (batch-1 decode
-13.4 → 30.3 tokens/s). The M5 Pro serving demo is next.
+The model does not fit in the Mac's memory, so its experts stream from the SSD. An EAT team wrote the offload engine,
+starting from a naive port. On an Apple M4 Pro with 48 GB:
+
+- **GGUF UD-IQ4_XS:** on a speed suite with prompts up to 256K tokens, the engine scores **3.05× Strata** (Splash
+  1.4.0: 2.03×). After a 256K-token prompt it still decodes at **33.6 tokens/s**, against 10.3 for Strata and 9.3
+  for Splash. On recorded coding-agent sessions replayed through each engine's API, it is **1.17× faster than Splash**.
+- **MLX 4-bit:** on recorded coding-agent sessions it is **3.32× faster than the naive engine** (batch-1 decode
+  13.4 → 30.3 tokens/s).
+
+<p align="center"><img alt="Qwen3.8-Flash-Next on an M4 Pro: EAT's engine vs Strata, Splash and the naive engine" src="assets/eat_mac_serving.png" width="100%"></p>
+
+**Coming soon:** serving on an Apple M5 Pro.
 
 ## Everything is released
 
