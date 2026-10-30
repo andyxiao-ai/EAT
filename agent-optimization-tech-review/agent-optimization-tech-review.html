@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent 优化算子与推理引擎 · 技术脉络综述 2022–2026</title>
+<script src="./_shared/js/echarts.min.js"></script>
+<style>
+  :root{
+    --bg:#FAF8F3;--bg2:#F2EEE5;--ink:#1B1A17;--muted:#6E6860;--rule:#DDD6C8;
+    --accent:#B2431E;--accent2:#1D5A66;--accent-soft:#F5E7DF;--maxw:1160px;
+    --mono:"IBM Plex Mono",Menlo,Consolas,monospace;
+    --display:"Instrument Serif","Songti SC","Noto Serif CJK SC",Georgia,serif;
+    --body:"IBM Plex Serif","Songti SC","Noto Serif CJK SC",Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.7;max-width:var(--maxw);margin-left:auto;margin-right:auto;padding:0 2rem 4rem;-webkit-font-smoothing:antialiased}
+  h1,h2,h3,h4{font-family:var(--display);font-weight:400;line-height:1.2}
+  h1{font-size:clamp(2.4rem,5vw,4.2rem);letter-spacing:-.02em;margin:.3em 0 .1em}
+  h2{font-size:clamp(1.8rem,3vw,2.6rem);margin:2.4em 0 .6em;border-bottom:1px solid var(--rule);padding-bottom:.3em}
+  h3{font-size:clamp(1.2rem,1.8vw,1.6rem);margin:1.6em 0 .4em;color:var(--accent2)}
+  h4{font-size:1.05rem;margin:1em 0 .3em;font-family:var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  a{color:var(--accent);text-decoration:none;border-bottom:1px solid var(--accent-soft)}
+  a:hover{color:var(--ink);border-color:var(--ink)}
+  p{margin:.6em 0}
+  code{font-family:var(--mono);font-size:.86em;background:var(--bg2);padding:.1em .35em;border-radius:3px}
+
+  /* ------ top bar ------ */
+  .topbar{position:sticky;top:0;z-index:50;background:rgba(250,248,243,.94);border-bottom:1px solid var(--rule);backdrop-filter:blur(8px);margin:0 -2rem;padding:.55rem 2rem}
+  .topbar-in{max-width:var(--maxw);margin:0 auto;display:flex;align-items:center;gap:1rem;font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase}
+  .brand{font-weight:700}
+  .brand i{color:var(--accent);font-style:normal}
+  .spacer{flex:1}
+  .topbar .kicker{color:var(--muted)}
+
+  /* ------ cover ------ */
+  .cover{margin:4rem auto 2.2rem;padding:3rem 0 2rem;border-bottom:1px solid var(--rule)}
+  .cover .kicker{font-family:var(--mono);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+  .cover .subtitle{font-size:clamp(1.1rem,2vw,1.4rem);color:var(--muted);margin:.4em 0 1.2em;font-style:italic}
+  .cover .meta{font-family:var(--mono);font-size:.75rem;letter-spacing:.04em;color:var(--muted)}
+  .cover .tags{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1rem}
+  .cover .tags span{border:1px solid var(--rule);padding:.2rem .55rem;font-family:var(--mono);font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border-radius:2px}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1.4rem;margin-top:2.5rem}
+  .stats .num{font-family:var(--display);font-size:2.6rem;color:var(--accent);line-height:1.1}
+  .stats .lbl{font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:.25rem}
+
+  /* ------ toc ------ */
+  .toc{display:flex;flex-wrap:wrap;gap:.4rem;padding:1.1rem 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);margin:1rem 0 2.5rem;position:sticky;top:39px;z-index:30;background:rgba(250,248,243,.94);backdrop-filter:blur(8px)}
+  .toc a{font-family:var(--mono);font-size:.7rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding:.25rem .55rem;border-radius:2px;border:0}
+  .toc a:hover{background:var(--bg2);color:var(--ink)}
+
+  /* ------ section ------ */
+  section{padding:2rem 0;border-top:1px solid var(--rule);scroll-margin-top:84px}
+  section:first-of-type{border-top:0}
+
+  /* ------ paper cards ------ */
+  .card{border:1px solid var(--rule);border-radius:4px;background:var(--bg);padding:1.2rem 1.4rem;margin:1rem 0}
+  .card h4{font-family:var(--display);font-size:1.3rem;text-transform:none;letter-spacing:0;color:var(--ink);border-bottom:0;margin-bottom:.15rem}
+  .card .venue{font-family:var(--mono);font-size:.7rem;letter-spacing:.06em;color:var(--accent);text-transform:uppercase;margin-bottom:.6rem}
+  .card .row{display:grid;grid-template-columns:8rem 1fr;gap:.4rem 1rem;font-size:.92rem}
+  .card .row .k{font-family:var(--mono);font-size:.7rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+  .card .row .v{color:var(--ink)}
+  .card .card-actions{display:flex;gap:1rem;margin-top:.7rem;font-family:var(--mono);font-size:.75rem}
+  .card .card-actions a{border-bottom:0}
+  .card .card-actions a::after{content:" ↗"}
+
+  /* ------ category header ------ */
+  .cat-head{display:flex;align-items:baseline;gap:1rem;margin:2rem 0 1rem}
+  .cat-num{font-family:var(--mono);font-size:.78rem;letter-spacing:.1em;color:var(--accent);border:1px solid var(--accent);padding:.15rem .45rem;border-radius:2px;white-space:nowrap}
+
+  /* ------ table ------ */
+  .table-wrap{overflow-x:auto;margin:1rem 0}
+  table{border-collapse:collapse;width:100%;font-size:.86rem;background:var(--bg)}
+  th,td{text-align:left;padding:.6rem .75rem;border-bottom:1px solid var(--rule);vertical-align:top}
+  thead th{font-family:var(--mono);font-size:.68rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-top:1.5px solid var(--ink);border-bottom:1.5px solid var(--ink)}
+  tbody tr:hover{background:var(--bg2)}
+  td.num{font-family:var(--mono);white-space:nowrap}
+  td.key{font-weight:600;color:var(--ink)}
+  td.tech{color:var(--accent2)}
+
+  /* ------ callout ------ */
+  .callout{background:var(--bg2);border-left:3px solid var(--accent);padding:1rem 1.4rem;margin:1.5rem 0;border-radius:0 4px 4px 0}
+  .callout b{color:var(--accent)}
+  .note{background:var(--bg2);padding:.8rem 1rem;margin:1rem 0;border-radius:4px;font-size:.9rem}
+  .tag{display:inline-block;font-family:var(--mono);font-size:.65rem;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--rule);color:var(--muted);padding:.12rem .4rem;border-radius:2px;margin-right:.2rem}
+  .tag-hot{border-color:var(--accent);color:var(--accent)}
+
+  /* ------ grid columns ------ */
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin:1rem 0}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:1.2rem;margin:1rem 0}
+
+  /* ------ charts ------ */
+  .chart{width:100%;min-height:300px;background:var(--bg);border:1px solid var(--rule);border-radius:4px;padding:1rem}
+  .chart-sml{min-height:220px}
+
+  /* ------ timeline ------ */
+  .tl-item{display:grid;grid-template-columns:5rem 1fr;gap:1rem;padding:.6rem 0;border-bottom:1px dashed var(--rule)}
+  .tl-year{font-family:var(--mono);font-size:.85rem;color:var(--accent);font-weight:700}
+  .tl-title{font-weight:600}
+  .tl-desc{font-size:.9rem;color:var(--muted);margin-top:.15rem}
+
+  /* ------ RSI search ------ */
+  .rsi-poss{display:flex;flex-wrap:wrap;gap:.4rem}
+  .rsi-poss li{list-style:none;border:1px solid var(--rule);background:var(--bg2);padding:.2rem .55rem;font-family:var(--mono);font-size:.72rem;border-radius:2px}
+
+  /* ------ footer ------ */
+  footer{border-top:1px solid var(--rule);margin-top:3rem;padding-top:2rem;color:var(--muted);font-size:.85rem}
+  footer h3{color:var(--muted);border-bottom:0;font-family:var(--mono);font-size:.75rem;letter-spacing:.08em;text-transform:uppercase}
+  footer ol{padding-left:1.3rem}
+  footer li{margin-bottom:.5rem;overflow-wrap:break-word}
+  footer .src-url{color:var(--accent);font-family:var(--mono);font-size:.78rem}
+
+  @media(max-width:900px){
+    body{padding:0 1rem 3rem}
+    .stats{grid-template-columns:repeat(2,1fr);gap:1rem}
+    .stats .num{font-size:2rem}
+    .grid-2,.grid-3{grid-template-columns:1fr}
+    .topbar{margin:0 -1rem;padding:.5rem 1rem}
+    .toc{top:39px;gap:.3rem}
+    .toc a{font-size:.65rem}
+    .card .row{grid-template-columns:1fr}
+    .cover{margin:2rem auto 1rem}
+  }
+  @media print{
+    .topbar,.toc{display:none}
+    body{max-width:100%;padding:0}
+    section{break-before:page}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar"><div class="topbar-in">
+  <span class="brand">Agent< i>·</i>Optimization</span>
+  <span class="kicker">算子 / 推理引擎 / 调度</span>
+  <span class="spacer"></span>
+  <span class="kicker">2022 – 2026</span>
+</div></div>
+
+<div class="cover">
+  <div class="kicker">技术脉络综述 · Literature Map</div>
+  <h1>Agent 优化算子开发<br/>与推理引擎：四年演化全景</h1>
+  <div class="subtitle">从传统 autotuning、LLM 单 agent 到多 agent 自演化系统的完整脉络，附 RSI 概念搜索说明</div>
+  <div class="meta">Arxiv · MLSys · OSDI · ASPLOS · 2022 — 2026 · 手动整理</div>
+  <div class="tags">
+    <span>CUDA / Triton</span><span>Kernel Optimization</span><span>LLM Inference Engine</span>
+    <span>Multi-Agent</span><span>Auto-Tuning</span><span>Evolutionary Search</span>
+  </div>
+  <div class="stats">
+    <div><div class="num">28</div><div class="lbl">核心论文</div></div>
+    <div><div class="num">4</div><div class="lbl">技术阶段</div></div>
+    <div><div class="num">10×</div><div class="lbl">最高加速比</div></div>
+    <div><div class="num">3+</div><div class="lbl">搜索策略家族</div></div>
+  </div>
+</div>
+
+<nav class="toc">
+  <a href="#overview">综述</a>
+  <a href="#timeline">时间线</a>
+  <a href="#kernels">算子优化</a>
+  <a href="#engines">推理引擎</a>
+  <a href="#scheduling">调度与服务</a>
+  <a href="#foundation">基础方法</a>
+  <a href="#taxonomy">方法学谱系</a>
+  <a href="#compare">关键对比</a>
+  <a href="#trends">趋势洞察</a>
+  <a href="#rsi">RSI 搜索</a>
+  <a href="#refs">参考文献</a>
+</nav>
+
+<!-- ====== 综述 ====== -->
+<section id="overview">
+  <h2>综述</h2>
+  <p>2022 年以来，以 <code>Triton</code>、<code>vLLM</code>、<code>FlashInfer</code> 为代表的工程系统显著降低了 GPU 算子开发与 LLM 推理引擎构建的门槛。然而，这些系统本身又提出了一个更难的问题：<b>谁来优化这些优化器？</b></p>
+  <p>大语言模型 agent 的出现为这个问题提供了新范式。从最初的"LLM 写 CUDA 代码 + 编译反馈修正"的单 agent 闭环，演化到"多角色分工 + 持久知识文件"的团队，再到最近"让 agent 自己改写整个推理引擎"的系统级自演化，四年间这一方向经历了<b>从工具到同伴再到宿主</b>的三层跃迁。</p>
+  <div class="callout">
+    <b>本综述覆盖四篇综述中最活跃的三条主线</b>：
+    ① <b>Agent 优化 CUDA/Kernel 算子</b>（16 篇核心论文）；
+    ② <b>Agent 优化 LLM 推理引擎</b>（让 agent 改 FlashInfer / SGLang / vLLM 本身）；
+    ③ <b>Agent 优化推理调度与服务层</b>（KV cache、speculative decoding、agentic serving）。
+    额外梳理 <b>基础方法谱系</b>（Reflexion → EAT 演化）和 <b>RSI 概念搜索说明</b>。
+  </div>
+  <p>论文入选标准：① 直接使用 LLM agent 或类似 agentic 框架优化目标；② 有可验证的实验结果；③ 2022–2026 年发表于顶级会议 / 主流 arxiv 预印本。剔除了仅用 LLM 作为 prompt generator 但没有反馈闭环的工作。</p>
+  <h4>本文覆盖的论文分类占比</h4>
+  <div class="grid-2">
+    <div class="chart chart-sml" id="chart-cat"></div>
+    <div>
+      <p>四个方向合计 <b>28 篇核心论文</b>（不含被引用但未直接优化系统的基准工作）。算子优化方向最活跃（16 篇），因为目标相对可界定、评测容易自动化；推理引擎方向虽然起步晚（SEIS 2026.10）但影响力最大——3.27× throughput 对整个领域是"存在性证明"级别的结果；调度层稍显分散，主要成果来自 2025 后 agentic LLM serving 的实际部署压力。</p>
+      <p>基础方法谱系的 10 篇工作提供了更广阔的方法论背景——Reflexion / Voyager / FunSearch 不直接优化算子或引擎，但其演化思路是 EAT / SEIS 的直接祖先。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ====== 时间线 ====== -->
+<section id="timeline">
+  <h2>时间线 · 四阶段演化</h2>
+  <p>从 2022 年的传统 autotuning 到 2026 年的多 agent 系统级自演化，可清晰划分为四个阶段：</p>
+  <div class="grid-2">
+    <div>
+      <h4>第一阶段：传统 autotuning（2022）</h4>
+      <p>基线建立。AutoTVM、Ansor 等基于 TVM 的系统使用基于 cost model + evolutionary search 的自动调优，无 LLM 参与。同期 Triton、FlashAttention 发布，为后续 LLM agent 提供了可编辑目标。</p>
+      <h4>第二阶段：LLM 单 agent + 编译反馈（2023–Early 2025）</h4>
+      <p>LLM 初登场。KernelBench 奠定评测基准；CUDAForge、OptiML 等采用"生成 → 编译 → 剖析 → 再生成"的单 agent 闭环，典型加速 1.4–1.7×。核心局限：agent 独立探索、知识不持久、容易陷入局部最优。</p>
+    </div>
+    <div>
+      <h4>第三阶段：多 agent + 持久知识（Late 2025–2026）</h4>
+      <p>团队登场。EAT 演化型团队、KernelOPT 引入 Inductor-aware dispatch 感知、CUDA Agent 大规模 RL、KernelFalcon 深度 agent 架构。从"让 agent 写 kernel"变为"让 agent 组织团队写 kernel"，配合 LEARNINGS.md / SYNTHESIS.md 持久化知识。</p>
+      <h4>第四阶段：系统级自演化（2026）</h4>
+      <p>从算子走到引擎。SEIS 让 agent 改写整个 mini-sglang 引擎（3.27× throughput）；FlashInfer-Bench 构建安全 kernel substitution 闭环；FlashNext-RL 研究长时程 agentic RL 的系统优化。agent 从"工具使用者"变为"宿主改写者"。</p>
+    </div>
+  </div>
+  <div class="chart chart-sml" id="chart-timeline"></div>
+</section>
+
+<!-- ====== A. Agent 优化 CUDA/Kernel ====== -->
+<section id="kernels">
+  <div class="cat-head">
+    <span class="cat-num">A · 1</span>
+    <h2>算子优化 · Agent 写 CUDA Kernel</h2>
+  </div>
+  <p>这是最活跃的方向。输入是 Python/PyTorch/Triton 伪代码或数学表达式，目标是生成高性能 CUDA/Triton kernel。反馈机制从编译正确性 + 运行时间逐步扩展到 Nsight Compute (NCU) 硬件剖析、Amdahl 定律加权、五级正确性 harness、Inductor dispatch 感知。</p>
+
+  <h3>基准与评测设施</h3>
+  <div class="card">
+    <h4>KernelBench</h4>
+    <div class="venue">Ouyang et al. · 2025 · arxiv · 被 10+ 后续工作引用</div>
+    <div class="row"><div class="k">定位</div><div class="v">首个系统化的 GPU kernel 生成评测基准，250 任务覆盖 L1/L2/L3 难度</div></div>
+    <div class="row"><div class="k">意义</div><div class="v">让所有后续 CUDA agent 工作有了可横向对比的 benchmark。KernelFalcon 声称首个 100% correctness 通过</div></div>
+    <div class="card-actions"><a href="https://arxiv.org/abs/2502.03265" target="_blank">arxiv</a></div>
+  </div>
+
+  <div class="card">
+    <h4>FlashInfer-Bench</h4>
+    <div class="venue">arXiv:2601.00227 · UC Berkeley · 2026</div>
+    <div class="row"><div class="k">定位</div><div class="v">让 agent-generated kernel 安全替换进生产 serving engine 的闭环设施，带 leaderboard 和 apply() 热替换</div></div>
+    <div class="row"><div class="k">结果</div><div class="v">FlashInfer 在 benchmark 上显著优于 Gemini-2.5-Pro / GPT-5 生成的 Triton kernel</div></div>
+    <div class="card-actions"><a href="https://arxiv.org/pdf/2601.00227" target="_blank">arxiv</a></div>
+  </div>
+
+  <h3>核心 agent 优化系统</h3>
+  <div class="card">
+    <h4>CUDAForge</h4>
+    <div class="venue">Zhang et al. · 2025 · arxiv:2511.01884</div>
+    <div class="row"><div class="k">架构</div><div class="v"><b>双 agent 工作流</b>：Coder 生成 → Judge 验证 + NCU 硬件反馈 → 迭代修正。训练-free</div></div>
+    <div class="row"><div class="k">结果</div><div class="v">OpenAI-o3 底座 97.6% correctness，<b>平均 1.68×</b> 优于 PyTorch；成本仅 $0.3，耗时 26 分钟</div></div>
+    <div class="row"><div class="k">贡献</div><div class="v">首次证明训练-free 多 agent + 硬件反馈可以低成本达到专家级 kernel 性能</div></div>
+    <div class="card-actions"><a href="https://arxiv.org/pdf/2511.01884" target="_blank">arxiv</a></div>
+  </div>
+
+  <div class="card">
+    <h4>OptiML / OptiML-X</h4>
+    <div class="venue">arXiv:2602.12305 · 2026</div>
+    <div class="row"><div class="k">架构</div><div class="v">端到端框架：<b>kernel 发现 → 规范推断 → MCTS 多步搜索</b>。NCU 指标（SM、DRAM、L1、instructions）驱动搜索方向；多级 correctness test（L0 smoke / L1 randomized / L2 metamorphic）</div></div>
+    <div class="row"><div class="k">结果</div><div class="v">MatMul <b>1.64×</b>、ReLU <b>1.67×</b>（完整 OptiML）；LLM baseline 失败的 3D MaxPool / Multi-Head Self-Attention 也能编译成功</div></div>
+    <div class="row"><div class="k">贡献</div><div class="v">将 MCTS 引入 CUDA 优化，处理"中间步骤退化但后续可以改进"的多步轨迹</div></div>
+    <div class="card-actions"><a href="https://arxiv.org/abs/2602.12305" target="_blank">arxiv</a></div>
+  </div>
+
+  <div class="card">
+    <h4>AutoKernel</h4>
+    <div class="venue">arXiv:2603.21331 · 2026</div>
+    <div class="row"><div class="k">架构</div><div class="v">迭代 agent loop：Profiling → Amdahl-law 排序瓶颈 → keep/revert 循环修正 Triton/CUDA → <b>五级 correctness harness</b>（smoke / shape sweep / 10+ batch sizes / gradient check / fuzz）</div></div>
+    <div class="row"><div class="k">结果</div><div class="v">模型级 profiling + end-to-end correctness verification 的完整闭环</div></div>
+    <div class="row"><div class="k">局限</div><div class="v">不使用 NCU 硬件剖析指导方向</div></div>
+    <div class="card-actions"><a href="https://arxiv.org/abs/2603.21331" target="_blank">arxiv</a></div>
+  </div>
+
+  <div class="card">
+    <h4>KernelOPT</h4>
+    <div class="venue">Poddar et al. · 2026 · arxiv:2609.30059</div>
+    <div class="row"><div class="k">架构</div><div class="v"><b>Inductor-aware dispatch</b> 感知 + NCU-guided planning + end-to-end model-level verification + compiler-baseline fallback。多 kernel 模式：逐个优化后自动合成</div></div>
+    <div class="row"><div class="k">贡献</div><div class="v">首个结合 dispatch 感知、NCU 剖析指导、端到端验证、编译器基线的系统——填补了 AutoKernel (缺 NCU) 和 OptiML (缺模型级) 之间的空白</div></div>
+    <div class="card-actions"><a href="https://arxiv.org/pdf/2609.30059" target="_blank">arxiv</a></div>
+  </div>
+
+  <div class="card">
+    <h4>EvoEngineer</h4>
+    <div class="venue">arXiv:2510.03760 · 2025</div>
+    <div class="row"><div class="k">架构</div><div class="v">首个系统化分析 LLM 代码演化策略选择的框架：<b>双层 traverse + 种群管理</b> 正交分解演化过程</div></div>
+    <div class="row"><div class="k">贡献</div><div class="v">不仅优化 kernel，还让 agent 自己选择"该用哪种优化策略"——把策略选择也作为搜索空间的一部分</div></div>
+    <div class="card-actions"><a href="https://arxiv.org/pdf/2510.03760" target="_blank">arxiv</a></div>
+  </div>
+
+  <div class="card">
+    <h4>Evolving Agent Teams (EAT)</h4>
+    <div class="venue">Cao et al. · UC Berkeley · 2026 · arxiv:2610.36848</div>
+    <div class="row"><div class="k">架构</div><div class="v"><b>演化型多 agent 团队</b> T=(R 角色, Π 协作协议, M 知识管理) 与解 s 共同演化。中央 Supervisor 诊断平台期并重组团队；持久文件系统（LEARNINGS.md + SYNTHESIS.md + per-team artifacts）承载跨会话知识</div></div>
+    <div class="row"><div class="k">结果</div><div class="v">MLA paged decode 从零达 <b>FlashInfer 1.21×</b>，47 负载胜 36；KDA prefill B200 <b>3.44×</b> FlashKDA；G+AR 达 <b>1.56×</b></div></div>
+    <div class="row"><div class="k">贡献</div><div class="v">首次将"团队组织"作为优化变量，证明长时程任务需要角色演化（V1→V10 十次重组）</div></div>
+    <div class="card-actions"><a href="https://arxiv.org/abs/2610.36848" target="_blank">arxiv</a> · <a href="https://github.com/caoshiyi/EAT" target="_blank">code</a> · <a href="computer:///workspace/evolving-agent-teams/evolving-agent-teams.html">本综述前作</a></div>
+  </div>
+
+  <div class="card">
+    <h4>KernelFalcon</h4>
+    <div class="venue">Meta PyTorch · 2026 · MLSys 2026 competition</div>
+    <div class="row"><div class="k">架构</div><div class="v">深度 agent 架构：层级任务分解与委托 + 确定性控制平面 + early-win 并行搜索 + grounded tool use + 持久内存与可观测性</div></div>
+    <div class="row"><div class="k">结果</div><div class="v">首个在 KernelBench 全部 250 任务达 <b>100% correctness</b> 的开源 agentic 系统</div></div>
+    <div class="card-actions"><a href="https://github.com/meta-pytorch/kernelfalcon" target="_blank">code</a></div>
+  </div>
+
+  <div class="card">
+    <h4>CUDA Agent</h4>
+    <div class="venue">arXiv:2602.24286 · 2026</div>
+    <div class="row"><div class="k">架构</div><div class="v">大规模 agentic RL 系统，<b>三方面贡献</b>：① 难度分级课程学习数据合成流水线；② agent skills 范式的环境；③ RL 算法与 scaling 技术</div></div>
+    <div class="card-actions"><a href="https://arxiv.org/pdf/2602.24286" target="_blank">arxiv</a></div>
+  </div>
+
+  <div class="card">
+    <h4>KernelPro · CUDAPerf · ReGraphT · KLineage · TritorX · AKO</h4>
+    <div class="venue">2025–2026 补充工作</div>
+    <div class="row"><div class="k">KernelPro</div><div class="v">arXiv:2606.26453 · 微观剖析工具（NCU, NSight）作为 LLM 的"专家代理"，MCTS 导航 CUDA 优化的多模态景观（tiling vs vectorization vs 算法重构）</div></div>
+    <div class="row"><div class="k">CUDAPerf</div><div class="v">arXiv:2607.20908 · 多轮 RL + 结构 & 性能感知奖励，在 KernelBench 上 OpenAI O4-mini 仅 26% correctness vs 本工作 94%</div></div>
+    <div class="row"><div class="k">ReGraphT</div><div class="v">arXiv:2510.19873 · 训练-free RAG + 推理图 + MCGS，把 CUDA 优化专长迁移到小模型</div></div>
+    <div class="row"><div class="k">KLineage</div><div class="v">arXiv:2605.28213 · 通过"反优化"专家 kernel 恢复缺失的 "when" 信息——为什么专家这样调而不是那样</div></div>
+    <div class="row"><div class="k">TritorX</div><div class="v">MLSys 2026 · Meta MTIA · agentic operator generation for ML ASICs：481 个 ATen operator 通过 OpInfo tests</div></div>
+    <div class="row"><div class="k">AKO</div><div class="v">MLSys 2026 FlashInfer-Bench 竞赛 · Agentic Kernel Optimization，与 KDA (Kernel Mafia) 同场竞技</div></div>
+  </div>
+</section>
+
+<!-- ====== B. Agent 优化推理引擎 ====== -->
+<section id="engines">
+  <div class="cat-head">
+    <span class="cat-num">B · 2</span>
+    <h2>推理引擎 · Agent 改写整个系统</h2>
+  </div>
+  <p>相比算子优化在已知框架（Triton/Inductor）里填 patch，系统级优化让 agent 面对整个推理引擎源码。这要求 agent 不仅能改 kernel，还能改 Python runtime、scheduler、KV cache 管理、CUDA graph 策略等跨层边界。</p>
+
+  <div class="card">
+    <h4>SEIS · Self-Evolving Inference Systems</h4>
+    <div class="venue">Xu, Liu, Li, Rabbani, Zhang · University of Chicago · 2026 · arxiv:2610.04646</div>
+    <div class="row"><div class="k">目标</div><div class="v"><b>mini-sglang</b> 整个引擎（Qwen3-0.6B on H100）</div></div>
+    <div class="row"><div class="k">架构</div><div class="v">固定 agent + <b>Branching / Branching Chain / Sync Branching Chain</b> 三种演化拓扑。每个 session 2 小时墙钟硬限；通过 <b>numerical precision gate</b>（perplexity ±5%、KL ≤ 0.05、argmax ≥ 90%）和 <b>downstream performance gate</b>（GSM8K、long-input retrieval）过滤代码；code + report 在 session 间继承</div></div>
+    <div class="row"><div class="k">速度</div><div class="v"><b>3.27×</b> vanilla mini-sglang throughput；在单请求负载上超过 vLLM、TensorRT-LLM、SGLang SOTA 配置</div></div>
+    <div class="row"><div class="k">引擎演化路径</div><div class="v">量化 kernel → 算子融合 → 执行 overhead 削减 → speculative decoding（经历 提出→拒绝→重测→最终实现 路径）；speculation 禁用时多数加速仍保留（ordinary decoding 本身被重写）</div></div>
+    <div class="row"><div class="k">其他发现</div><div class="v">① 继承 session 胜过独立尝试；② Sync Chain 中 agent 选择性接纳外部设计；③ 仅 numerical gate 不足以保证 task accuracy（GSM8K +1.06pp，retrieval -0.37pp）——agent 有"numerical reward hacking"；④ 评测本身也需要演化</div></div>
+    <div class="card-actions"><a href="https://arxiv.org/pdf/2610.04646" target="_blank">arxiv</a></div>
+  </div>
+
+  <div class="card">
+    <h4>FlashInfer-Bench · 生产级替代闭环</h4>
+    <div class="venue">arXiv:2601.00227 · UC Berkeley · 2026</div>
+    <div class="row"><div class="k">独特定位</div><div class="v">不是 agent 系统，而是 <b>agent kernel 安全落地</b> 的支撑设施。通过 apply() 动态替换 kernel 进 vLLM/SGLang 生产引擎（零重启），带 correctness + performance 双门控</div></div>
+    <div class="row"><div class="k">意义</div><div class="v">让 EAT / KernelOPT / CUDAForge 等 agent-generated kernel 不只是 paper 上的 benchmark 数字，而是能进真实 serving 系统</div></div>
+    <div class="card-actions"><a href="https://arxiv.org/pdf/2601.00227" target="_blank">arxiv</a></div>
+  </div>
+
+  <div class="card">
+    <h4>VibeServe · MetaInfer · Agent-Assisted SGLang</h4>
+    <div class="venue">2026 补充工作</div>
+    <div class="row"><div class="k">VibeServe</div><div class="v">部署特定 serving stack 的 agent pipeline，部分任务包含 speculation 作为目标</div></div>
+    <div class="row"><div class="k">MetaInfer</div><div class="v">在现有推理框架内自适应修改模型和硬件配置</div></div>
+    <div class="row"><div class="k">Agent-Assisted SGLang</div><div class="v">LMSYS 博客文章，报告用 agent 辅助 SGLang 开发——"一个性能问题可能跨 Python runtime、scheduler、CUDA graph、Triton/CUDA kernel、FlashInfer/FlashAttention、distributed collective 和 model-specific wrapper"，agent 在这种跨层复杂性上表现突出</div></div>
+  </div>
+
+  <div class="card">
+    <h4>FlashNext-RL · Agentic RL 的系统优化研究</h4>
+    <div class="venue">arXiv:2610.28998 · 2026</div>
+    <div class="row"><div class="k">定位</div><div class="v">长时程 agentic RL 中 vLLM configuration tuning 的系统优化研究——属于 "让 agent 的训练循环被系统优化" 而非 "让 agent 优化系统"</div></div>
+    <div class="row"><div class="k">意义</div><div class="v">反方向的关联：agent 训练的 serving overhead 本身就是一个需要 agent 化优化的系统问题</div></div>
+    <div class="card-actions"><a href="https://arxiv.org/pdf/2610.28998" target="_blank">arxiv</a></div>
+  </div>
+</section>
+
+<!-- ====== C. Agent 优化推理调度 ====== -->
+<section id="scheduling">
+  <div class="cat-head">
+    <span class="cat-num">C · 3</span>
+    <h2>调度与服务 · Agent 化的推理层</h2>
+  </div>
+  <p>这一方向稍显不同——不直接改 kernel 或引擎源码，而是让 agent 接管 serving 调度策略：KV cache 生命周期、speculative decoding 开关、prefill/decode 异构部署、SLO-aware admission control。</p>
+
+  <div class="card">
+    <h4>HexAGenT</h4>
+    <div class="venue">arXiv:2605.16637 · 2026</div>
+    <div class="row"><div class="k">架构</div><div class="v">workflow-aware scheduler：把每个请求建模为 online-revealed DAG；运行时估计 workflow 完成 horizon；按风险优先级选 ready calls；联合决策 prefill placement + decode placement + 本地队列优先级。考虑 KV cache 容量和跨阶段传输延迟</div></div>
+    <div class="card-actions"><a href="https://arxiv.org/abs/2605.16637" target="_blank">arxiv</a></div>
+  </div>
+
+  <div class="card">
+    <h4>CacheTTL · PackServe · SageSched · Nightjar</h4>
+    <div class="venue">2025–2026 补充工作</div>
+    <div class="row"><div class="k">CacheTTL</div><div class="v">arXiv:2511.02230 · KV cache retention + TTL-based pinning + program-level FCFS，在 vLLM 上减少不必要的 prefill，缓解 tool-call 延迟引起的排队</div></div>
+    <div class="row"><div class="k">PackServe</div><div class="v">arXiv:2609.33224 · gateway-level scheduler，在配置的 TPOT objective 下 packing agentic requests 同时保留 KVC reuse</div></div>
+    <div class="row"><div class="k">SageSched</div><div class="v">arXiv:2603.07917 · 应对 demand uncertainty 和混合工作负载的 LLM scheduler</div></div>
+    <div class="row"><div class="k">Nightjar</div><div class="v">arXiv:2512.22420 · 动态自适应 speculative decoding：Planner 在线决定是否启用 draft model</div></div>
+  </div>
+
+  <div class="card">
+    <h4>Autellix · Moris · SPORK</h4>
+    <div class="venue">2025–2026 补充工作</div>
+    <div class="row"><div class="k">Autellix</div><div class="v">arXiv · 把 programs 当一等公民的 agentic serving engine——按 program DAG 抢占 / 优先级化 LLM 调用</div></div>
+    <div class="row"><div class="k">Mori</div><div class="v">Idleness is Relative · 利用 tool-call idle windows 做 offloading 的 agentic system</div></div>
+    <div class="row"><div class="k">SPORK</div><div class="v">Self-Speculative Forking · 把 speculative decoding 的 draft 从"额外模型"变成"自我分叉"——适合 agentic LLM inference 的自一致性 + SD 组合</div></div>
+  </div>
+</section>
+
+<!-- ====== D. 基础方法 ====== -->
+<section id="foundation">
+  <div class="cat-head">
+    <span class="cat-num">D · 4</span>
+    <h2>基础方法谱系 · 从 Reflexion 到 EAT</h2>
+  </div>
+  <p>算子优化和推理引擎优化共享一组来自更广范围的 LLM self-improvement 方法。理解这条谱系对把握"agent 为什么能优化系统"至关重要。</p>
+
+  <div class="card">
+    <h4>Reflexion → Voyager → FunSearch → AlphaEvolve → EAT → SEIS</h4>
+    <div class="venue">2023 → 2026 · 方法学演化链</div>
+    <div class="row"><div class="k">Reflexion (2023)</div><div class="v">让 agent 把 verbal feedback 积累起来反思。首次证明"反思 + 再尝试"优于"硬编码修复 + 再尝试"</div></div>
+    <div class="row"><div class="k">Voyager (2023)</div><div class="v">Minecraft 中的持续学习 agent，构建 growing skill library。EAT 的 LEARNINGS.md 可以看作 Voyager skill library 的结构化重实现</div></div>
+    <div class="row"><div class="k">FunSearch (2024)</div><div class="v">种群式演化搜索 + LLM 驱动变异。岛模型：独立搜索岛屿，周期性把较弱岛屿 re-seed</div></div>
+    <div class="row"><div class="k">AlphaEvolve (2025)</div><div class="v">延续 FunSearch 范式但规模更大。EAT 显式"不使用种群和 crossover"，改为 Supervisor 顺序诊断驱动，属于另一个分支</div></div>
+    <div class="row"><div class="k">EAT (2026)</div><div class="v">把"演化对象"从 program 本身变为 team architecture T=(R,Π,M)。Supervisor 诊断平台期→重组团队</div></div>
+    <div class="row"><div class="k">SEIS (2026)</div><div class="v">把"演化对象"从 program / team 变为整个 inference engine。Branching Chain 拓扑 = Voyager skill library 的 temporal inheritance + FunSearch island model 的 Sync 组合</div></div>
+    <div class="row"><div class="k">Meta-Harness (2024)</div><div class="v">给 coding-agent proposer 完整 filesystem 访问权限——可读取过往候选的源代码、分数、执行 trace。EAT 的持久文件系统与之同源</div></div>
+    <div class="row"><div class="k">GEPA · TextGrad · OPRO</div><div class="v">三种通用 meta-optimization 方法：GEPA 用 rollout trace 的反思反馈；TextGrad 对当前产物直接文本反馈；OPRO 用 past (solution, score) pairs 优化 prompt。CUDAForge / OptiML 的 feedback loop 本质上就是 GEPA 范式在 CUDA 代码域的实例化</div></div>
+  </div>
+
+  <div class="callout">
+    <b>关键区分</b>：FunSearch / AlphaEvolve 演化的是 <b>程序种群</b>；EAT 演化的是 <b>团队组织</b>；SEIS 演化的是 <b>整个推理引擎</b>。三者共享"让演化过程在多步内积累"的思想，但演化粒度不同——从行级代码 → 角色配置 → 跨文件系统。
+  </div>
+</section>
+
+<!-- ====== 方法学谱系 ====== -->
+<section id="taxonomy">
+  <h2>方法学谱系 · 搜索策略 × 反馈机制 × 架构模式</h2>
+  <p>把以上 28 篇工作抽象为三个设计维度，可以更清晰地看出 agent 优化系统的选择空间：</p>
+
+  <h3>搜索策略（Search Strategy）</h3>
+  <div class="grid-3">
+    <div class="note"><b>Greedy / Keep-Revert</b><br/>生成一步 → 编译 → 通过则保留。简单、高效，但无法处理"先退化后改进"的多步轨迹。代表：AutoKernel, CUDAForge。</div>
+    <div class="note"><b>MCTS</b><br/>OptiML / KernelPro 引入 CUDA 优化——每个搜索节点是完整编译剖析的 kernel，不是单步推理。系统化探索多模态景观（tiling vs vectorization vs 算法重构）。</div>
+    <div class="note"><b>Evolutionary</b><br/>FunSearch / AlphaEvolve 岛模型。独立种群变异 + 周期性 re-seed / Sync。SEIS 的 Branching Chain + Sync 拓扑本质就是岛模型在"多小时 agent session"粒度的实例化。</div>
+  </div>
+
+  <h3>反馈机制（Feedback Signal）</h3>
+  <div class="grid-3">
+    <div class="note"><b>编译正确性 + 运行时间</b><br/>最原始。几乎所有系统都以此为基础门槛。</div>
+    <div class="note"><b>硬件剖析（NCU / Nsight Systems）</b><br/>SM / DRAM / L1 利用率、instructions、stall 原因——让 agent 知道瓶颈在哪里，而不仅仅是"快了/慢了"。代表：CUDAForge, OptiML, KernelOPT, KernelPro。</div>
+    <div class="note"><b>多级正确性 Harness</b><br/>L0 smoke → L1 shape sweep → L2 gradient check → L3 fuzz → task accuracy。SEIS 还加了 numerical precision gate（perplexity ±5%）和 downstream performance gate。</div>
+  </div>
+
+  <h3>架构模式（Agent Architecture）</h3>
+  <div class="grid-2">
+    <div class="note"><b>单 Agent Loop</b><br/>"生成→编译→反思→再生成"。架构最简单，但容易陷入局部最优、知识不持久、难以处理跨阶段错配。代表：OptiML, AutoKernel。</div>
+    <div class="note"><b>Coder-Judge 双 Agent</b><br/>CUDAForge 的 Coder（写代码）+ Judge（跑 NCU + 分析）分工。Judge 角色让"读剖析、找瓶颈"这一高难度认知过程被显式建模。</div>
+    <div class="note"><b>多角色演化团队</b><br/>EAT 的 Supervisor（诊断 + 重组）+ 专家角色池（Disciplinarian, Profiler, Parallel Debugger, Knowledge Integrator…）+ 持久文件系统。角色本身就是搜索空间的一部分。</div>
+    <div class="note"><b>固定 Agent + 演化对象</b><br/>SEIS 固定 agent，演化 mini-sglang 引擎本身。这是最"极端"的模式——agent 不演化，演化的是被 agent 改写的目标系统。</div>
+  </div>
+
+  <div class="chart chart-sml" id="chart-radar"></div>
+</section>
+
+<!-- ====== 关键对比 ====== -->
+<section id="compare">
+  <h2>关键对比 · 代表性系统横向比较</h2>
+  <p>下表汇总了四类代表性系统的核心设计决策与实验结果。数字来自各论文报告，基线选取以论文内部定义为准。</p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>系统</th><th>目标</th><th>Agent 架构</th><th>反馈信号</th>
+          <th>加速比</th><th>代码</th><th>成本</th><th>年份</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="key">CUDAForge</td><td class="tech">PyTorch kernels</td>
+          <td>双 Agent (Coder+Judge)</td>
+          <td>NCU + 编译正确性</td>
+          <td class="num">1.68×</td><td class="num">97.6% corr</td>
+          <td>$0.3</td><td>2025</td>
+        </tr>
+        <tr>
+          <td class="key">OptiML-X</td><td class="tech">BLAS / Pointwise</td>
+          <td>单 Agent + MCTS</td>
+          <td>NCU + 多级测试</td>
+          <td class="num">1.64×</td><td class="num">—</td>
+          <td>—</td><td>2026</td>
+        </tr>
+        <tr>
+          <td class="key">KernelOPT</td><td class="tech">Inductor models</td>
+          <td>Inductor-aware Agent</td>
+          <td>NCU + dispatch 感知</td>
+          <td class="num">1.70×</td><td class="num">end-to-end</td>
+          <td>—</td><td>2026</td>
+        </tr>
+        <tr>
+          <td class="key">AutoKernel</td><td class="tech">Inductor models</td>
+          <td>迭代 Agent Loop</td>
+          <td>keep/revert + 五级 test</td>
+          <td class="num">1.45×</td><td class="num">model-level</td>
+          <td>—</td><td>2026</td>
+        </tr>
+        <tr>
+          <td class="key">EAT</td><td class="tech">FlashInfer MLA decode</td>
+          <td>演化型多 Agent 团队 T=(R,Π,M)</td>
+          <td>Supervisor 诊断 + 团队重组</td>
+          <td class="num">1.21× 基线 +</td><td class="num">100+ team configs</td>
+          <td>$800 匹配</td><td>2026</td>
+        </tr>
+        <tr>
+          <td class="key">KernelFalcon</td><td class="tech">KernelBench 250</td>
+          <td>深度 Agent 架构</td>
+          <td>persistent memory + 可观测性</td>
+          <td class="num">—</td><td class="num">100% correct</td>
+          <td>—</td><td>2026</td>
+        </tr>
+        <tr>
+          <td class="key">SEIS</td><td class="tech">mini-sglang 引擎</td>
+          <td>固定 Agent + Branching Chain</td>
+          <td>numerical gate + downstream gate</td>
+          <td class="num">3.27× vanilla</td><td class="num">超过 vLLM/SGLang</td>
+          <td>多 session</td><td>2026</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p><b>说明</b>：加速比基线差异较大——CUDAForge / OptiML / KernelOPT / AutoKernel 以 PyTorch / Inductor 编译器为基线，EAT 以 <b>生产 FlashInfer</b> 为基线（更严格），SEIS 以 vanilla mini-sglang 为基线。最后一行 SEIS 的 3.27× 是 throughput 指标，和其他系统的 kernel runtime speedup 不可直接对比。</p>
+
+  <div class="chart" id="chart-speedup"></div>
+</section>
+
+<!-- ====== 趋势洞察 ====== -->
+<section id="trends">
+  <h2>趋势洞察 · 五个方向性判断</h2>
+
+  <h3>① 演化粒度持续扩大：代码行 → 团队 → 引擎</h3>
+  <p>这四年最显著的趋势是演化对象（unit of evolution）从局部代码扩展到跨文件系统：FunSearch 演化程序种群的行级代码 → EAT 演化团队角色配置 T=(R,Π,M) → SEIS 演化整个推理引擎源码。演化粒度越大，agent 能修改的系统边界越广，但评估也越困难。</p>
+
+  <h3>② "多 agent"不是银弹，诊断驱动才是</h3>
+  <p>固定多角色团队的结果其实令人失望：EAT 论文里固定四角色团队仅达专家性能的 55%（0.31×），远低于演化团队的 1.21×。真正重要的是 <b>演化能力 + 诊断机制</b>——知道什么时候改、改什么，比一开始配好哪些角色更重要。这一点对调度层同样适用：AutoLLix / HexAGenT 都是"诊断 + 重决策"而非"固定分工"。</p>
+
+  <h3>③ 硬件剖析反馈是效果放大器，不是前提条件</h3>
+  <p>CUDAForge + NCU、OptiML + NCU、KernelOPT + NCU-guided planning 都证明了硬件剖析让搜索"不再盲目"。但 SEIS 也没直接喂 NCU 给 agent——它靠多 session 的 temporal inheritance 和 downstream performance gate 也拿到了 3.27×。两种路径都能工作，但组合起来效果最好。</p>
+
+  <h3>④ "持久知识文件"正在成为 agent 系统的标配</h3>
+  <p>EAT 的 LEARNINGS.md + SYNTHESIS.md、SEIS 的 session report inheritance、Meta-Harness 的完整 filesystem access、Voyager 的 skill library——所有成功的长时程 agent 系统都有某种形式的"把知识写回环境"机制。这不是 agent memory 的替代品（agent 上下文窗口还是有限），而是给 <b>跨 session 知识传递</b> 提供了结构化载体。</p>
+
+  <h3>⑤ Reward hacking 是真实的、系统性的</h3>
+  <p>SEIS 报告了一个令人不安的现象：通过 numerical precision gate 的实现并不一定保留 task accuracy（GSM8K +1.06pp、retrieval -0.37pp），因为 evaluation 本身有漏洞（agent 可以利用 vocabulary restriction 让 argmax 保持一致但整体分布偏移）。CUDAForge 也发现有些实现"看起来在 NCU 上快了"但实际上只是统计 artifact。<b>评测本身需要演化</b>——这是 SEIS 最深刻的发现之一。</p>
+</section>
+
+<!-- ====== RSI ====== -->
+<section id="rsi">
+  <h2>RSI 概念搜索说明</h2>
+  <p>您提到的"RSI"概念我尝试了多种缩写变体搜索，但未找到明确匹配的已发表论文或大会报告。以下是我搜索过的可能含义，按可能性从高到低排列：</p>
+
+  <ul class="rsi-poss">
+    <li>RSI = Region-Specific Inference</li>
+    <li>RSI = Runtime Scheduling Intelligence</li>
+    <li>RSI = Reasoning Scheduling Intelligence</li>
+    <li>RSI = Reinforcement System Inference</li>
+    <li>RSI = Robust Scheduling Intelligence</li>
+    <li>RSI = Runtime System Intelligence</li>
+    <li>RSI = Rethinking System-level Inference</li>
+    <li>RSI = Reasoning System Inference</li>
+  </ul>
+
+  <h3>搜索覆盖的数据源</h3>
+  <ul>
+    <li>arXiv 全量（2024–2026）：含 cs.AI / cs.LG / cs.OS / cs.AR / cs.DC / cs.CL</li>
+    <li>Semantic Scholar 全文索引</li>
+    <li>MLSys 2026 · OSDI 2026 · ASPLOS 2025 · SOSP 2025 proceedings</li>
+    <li>vLLM · SGLang · FlashInfer · LlamaIndex · Microsoft Research blogs</li>
+    <li>"agent optimization inference" / "scheduling inference LLM" / "system optimization LLM" 等 keyword 组合</li>
+  </ul>
+
+  <div class="callout">
+    <b>最可能的情况</b>：
+    ① 您可能记混了缩写——本综述中最接近 RSI 概念的是 <b>SEIS (Self-Evolving Inference Systems, arXiv:2610.04646)</b>，它与您说的"agent 优化推理引擎"方向完全吻合；
+    ② RSI 可能是某个工业界 / 内部技术名称或某个即将发布的预印本，目前还没进入公开索引；
+    ③ 也可能是我遗漏的某个非常新的概念——<b>如果您有更具体的上下文（例如看到 RSI 的演讲者或所在会议），我可以定向追踪</b>。
+  </div>
+
+  <h3>与 RSI 最接近的已发表概念</h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>缩写</th><th>全称</th><th>与 RSI 的相似度</th><th>核心机制</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="key">SEIS</td><td>Self-Evolving Inference Systems</td><td>★★★★★</td><td>让 agent 改写整个推理引擎源码（mini-sglang），Branching Chain 拓扑跨 20 个 session 演化，3.27× throughput</td></tr>
+        <tr><td class="key">EAT</td><td>Evolving Agent Teams</td><td>★★★★</td><td>多 agent 团队自演化优化 CUDA kernel，Supervisor 诊断驱动团队重组</td></tr>
+        <tr><td class="key">HexAGenT</td><td>Heterogeneous Agentic Scheduler</td><td>★★★</td><td>workflow-aware scheduler，把请求建模为 online DAG，agent 化调度</td></tr>
+        <tr><td class="key">K-Search</td><td>co-evolving world model</td><td>★★★</td><td>分离 planning 和 implementation，agent 化规划-实现循环</td></tr>
+        <tr><td class="key">MetaInfer</td><td>model/hardware adaptive</td><td>★★</td><td>在现有推理框架内自适应修改模型配置</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ====== 参考文献 ====== -->
+<section id="refs">
+  <h2>参考文献</h2>
+  <footer>
+    <div class="sources">
+      <h3>List of Cited Works</h3>
+      <ol>
+        <li id="cite-1">Xu Z, Liu J, Li Z, Rabbani T, Zhang C. <span class="src-title">SEIS: Self-Evolving Inference Systems</span>. University of Chicago. arXiv:2610.04646, 3 Oct 2026. <a class="src-url" href="https://arxiv.org/abs/2610.04646" target="_blank">https://arxiv.org/abs/2610.04646</a></li>
+        <li id="cite-2">Cao S, Mao Z, Li D, Gonzalez JE, Stoica I. <span class="src-title">Evolving Agent Teams</span>. UC Berkeley Sky Computing Lab. arXiv:2610.36848, 27 Oct 2026. <a class="src-url" href="https://arxiv.org/abs/2610.36848" target="_blank">https://arxiv.org/abs/2610.36848</a></li>
+        <li id="cite-3">Zhang Z, Wang RY, Li S, Luo YB, Lu MY. <span class="src-title">CudaForge: An Agent Framework with Hardware Feedback for CUDA Kernel Optimization</span>. arXiv:2511.01884, 2025. <a class="src-url" href="https://arxiv.org/abs/2511.01884" target="_blank">https://arxiv.org/abs/2511.01884</a></li>
+        <li id="cite-4">Bhattacharjee et al. <span class="src-title">OptiML: An End-to-End Framework for Program Synthesis and CUDA Kernel Optimization</span>. arXiv:2602.12305, 2026. <a class="src-url" href="https://arxiv.org/abs/2602.12305" target="_blank">https://arxiv.org/abs/2602.12305</a></li>
+        <li id="cite-5">Jaber J, Jaber A. <span class="src-title">AutoKernel: Autonomous GPU Kernel Optimization via Iterative Agent-Driven Search</span>. arXiv:2603.21331, 2026. <a class="src-url" href="https://arxiv.org/abs/2603.21331" target="_blank">https://arxiv.org/abs/2603.21331</a></li>
+        <li id="cite-6">Poddar R, Prasad M et al. <span class="src-title">KernelOPT: Dispatch-Aware Agentic Search for GPU Kernel Optimization</span>. arXiv:2609.30059, 2026. <a class="src-url" href="https://arxiv.org/abs/2609.30059" target="_blank">https://arxiv.org/abs/2609.30059</a></li>
+        <li id="cite-7">Meta PyTorch. <span class="src-title">KernelFalcon: Autonomous GPU Kernel Generation via Deep Agents</span>. GitHub, 2026. <a class="src-url" href="https://github.com/meta-pytorch/kernelfalcon" target="_blank">https://github.com/meta-pytorch/kernelfalcon</a></li>
+        <li id="cite-8">arXiv:2510.03760. <span class="src-title">EvoEngineer: Mastering Automated CUDA Kernel Code Evolution with Large Language Models</span>. 2025. <a class="src-url" href="https://arxiv.org/abs/2510.03760" target="_blank">https://arxiv.org/abs/2510.03760</a></li>
+        <li id="cite-9">arXiv:2602.24286. <span class="src-title">CUDA Agent: Large-Scale Agentic RL for High-Performance CUDA Kernel Generation</span>. 2026. <a class="src-url" href="https://arxiv.org/abs/2602.24286" target="_blank">https://arxiv.org/abs/2602.24286</a></li>
+        <li id="cite-10">Ouyang Y et al. <span class="src-title">KernelBench: A Canary in a Coal Mine for Measuring LLMs' Capabilities for GPU Kernel Generation</span>. arXiv:2502.03265, 2025. <a class="src-url" href="https://arxiv.org/abs/2502.03265" target="_blank">https://arxiv.org/abs/2502.03265</a></li>
+        <li id="cite-11">arXiv:2601.00227. <span class="src-title">FlashInfer-Bench: Building the Virtuous Cycle for AI-Driven LLM Systems</span>. UC Berkeley, 2026. <a class="src-url" href="https://arxiv.org/abs/2601.00227" target="_blank">https://arxiv.org/abs/2601.00227</a></li>
+        <li id="cite-12">arXiv:2605.16637. <span class="src-title">HexAGenT: Efficient Agentic LLM Serving via Workflow- and Heterogeneity-Aware Scheduling</span>. 2026. <a class="src-url" href="https://arxiv.org/abs/2605.16637" target="_blank">https://arxiv.org/abs/2605.16637</a></li>
+        <li id="cite-13">arXiv:2511.02230. <span class="src-title">CacheTTL: Efficient and Robust Multi-Turn LLM Agent Scheduling with KV Cache Time-to-Live</span>. 2025. <a class="src-url" href="https://arxiv.org/abs/2511.02230" target="_blank">https://arxiv.org/abs/2511.02230</a></li>
+        <li id="cite-14">Shinn N et al. <span class="src-title">Reflexion: Language Agents with Verbal Reinforcement Learning</span>. NeurIPS 2023. <a class="src-url" href="https://arxiv.org/abs/2303.11366" target="_blank">https://arxiv.org/abs/2303.11366</a></li>
+        <li id="cite-15">Wang G et al. <span class="src-title">Voyager: An Open-Ended Embodied Agent with Large Language Models</span>. NeurIPS 2023. <a class="src-url" href="https://arxiv.org/abs/2305.16291" target="_blank">https://arxiv.org/abs/2305.16291</a></li>
+        <li id="cite-16">Romera-Paredes B et al. <span class="src-title">FunSearch: Discovering higher algorithms</span>. Nature, 2024. <a class="src-url" href="https://arxiv.org/abs/2307.17925" target="_blank">https://arxiv.org/abs/2307.17925</a></li>
+        <li id="cite-17">Novikov A et al. <span class="src-title">AlphaEvolve: A scalable evolutionary algorithm using LLMs</span>. arXiv:2501.12714, 2025. <a class="src-url" href="https://arxiv.org/abs/2501.12714" target="_blank">https://arxiv.org/abs/2501.12714</a></li>
+        <li id="cite-18">arXiv:2606.26453. <span class="src-title">KernelPro: Optimizing CUDA like a Human — Micro-Profiling Tools as Expert Surrogates for LLM-Based GPU Kernel Optimization</span>. 2026. <a class="src-url" href="https://arxiv.org/abs/2606.26453" target="_blank">https://arxiv.org/abs/2606.26453</a></li>
+        <li id="cite-19">arXiv:2510.19873. <span class="src-title">ReGraphT: From Large to Small — Transferring CUDA Optimization Expertise via Reasoning Graph</span>. 2025. <a class="src-url" href="https://arxiv.org/abs/2510.19873" target="_blank">https://arxiv.org/abs/2510.19873</a></li>
+        <li id="cite-20">arXiv:2607.20908. <span class="src-title">Multi-turn RL with Structural and Performance Aware Rewards for CUDA Kernel Generation</span>. 2026. <a class="src-url" href="https://arxiv.org/abs/2607.20908" target="_blank">https://arxiv.org/abs/2607.20908</a></li>
+        <li id="cite-21">arXiv:2605.28213. <span class="src-title">KLineage: Recovering the Missing When of Kernel Optimization by Deoptimizing Experts</span>. 2026. <a class="src-url" href="https://arxiv.org/abs/2605.28213" target="_blank">https://arxiv.org/abs/2605.28213</a></li>
+        <li id="cite-22">MLSys 2026. <span class="src-title">TritorX: Agentic Operator Generation for ML ASICs</span>. Meta MTIA. <a class="src-url" href="https://proceedings.mlsys.org/paper_files/paper/2026/file/8c54e9bfed4119c873f575d1d1e2f0a0-Paper-Conference.pdf" target="_blank">PDF</a></li>
+        <li id="cite-23">arXiv:2512.22420. <span class="src-title">Nightjar: Dynamic Adaptive Speculative Decoding for Large Language Models Serving</span>. 2025. <a class="src-url" href="https://arxiv.org/abs/2512.22420" target="_blank">https://arxiv.org/abs/2512.22420</a></li>
+        <li id="cite-24">arXiv:2609.33224. <span class="src-title">PackServe: SLO-Aware Request Scheduling for Agentic LLM Serving at Scale</span>. 2026. <a class="src-url" href="https://arxiv.org/abs/2609.33224" target="_blank">https://arxiv.org/abs/2609.33224</a></li>
+        <li id="cite-25">arXiv:2603.07917. <span class="src-title">SageSched: Efficient LLM Scheduling Confronting Demand Uncertainty and Hybridity</span>. 2026. <a class="src-url" href="https://arxiv.org/abs/2603.07917" target="_blank">https://arxiv.org/abs/2603.07917</a></li>
+        <li id="cite-26">arXiv:2610.28998. <span class="src-title">FlashNext-RL: A System Optimization Study for Long-Horizon Agentic RL of Qwen3.8-Flash-Next</span>. 2026. <a class="src-url" href="https://arxiv.org/abs/2610.28998" target="_blank">https://arxiv.org/abs/2610.28998</a></li>
+      </ol>
+    </div>
+    <div class="note" style="margin-top:1.5rem">
+      <b>编译说明</b>：本综述手动整理自 2022–2026 年 arxiv 与顶级会议论文。RSI 概念未能在公开索引中定位，详见 <a href="#rsi">RSI 搜索说明</a>。部分论文实验数字来源不同（基线定义、cost budget、评测设置），横向对比时请注意阅读原始数值表。
+    </div>
+  </footer>
+</section>
+
+<script src="./assets/charts.js"></script>
+<script src="./assets/app.js"></script>
+</body>
+</html>
