@@ -23,7 +23,7 @@
       },
       yAxis: {
         type: 'category',
-        data: ['算子优化', '推理引擎', '调度与服务', '基础方法'],
+        data: ['算子优化', '推理引擎', '调度与服务', '基础方法', 'RSI 自我改进'],
         axisLine: { lineStyle: { color: rule } },
         axisTick: { show: false },
         axisLabel: { color: ink, fontSize: 11 }
@@ -37,9 +37,10 @@
           data: [
             [0, 0], [0, 3], [1, 0], [1, 3],
             [2, 0], [2, 1], [2, 3],
-            [3, 0], [3, 1], [3, 2], [3, 3],
-            [4, 0], [4, 1], [4, 2], [4, 3],
-            [5, 0], [5, 1], [5, 2]
+            [2, 4],
+            [3, 0], [3, 1], [3, 2], [3, 3], [3, 4],
+            [4, 0], [4, 1], [4, 2], [4, 3], [4, 4],
+            [5, 0], [5, 1], [5, 2], [5, 4]
           ],
           label: { show: false }
         }
@@ -56,7 +57,7 @@
       animation: false,
       tooltip: { trigger: 'item', appendToBody: true },
       legend: { show: false },
-      color: [accent, accent2, accent + 'aa', muted],
+      color: [accent, accent2, accent + 'aa', muted, ink],
       series: [{
         type: 'pie',
         radius: ['45%', '72%'],
@@ -69,9 +70,10 @@
         },
         data: [
           { name: '算子优化', value: 16 },
-          { name: '推理引擎', value: 6 },
-          { name: '调度/服务', value: 6 },
-          { name: '基础方法', value: 10 }
+          { name: '推理引擎', value: 5 },
+          { name: '调度/服务', value: 8 },
+          { name: '基础方法', value: 8 },
+          { name: 'RSI', value: 20 }
         ]
       }]
     });
@@ -159,5 +161,46 @@
       }]
     });
     window.addEventListener('resize', function () { bChart.resize(); });
+  }
+  // ---------- RSI self-improvement gains ----------
+  var rsi = document.getElementById('chart-rsi');
+  if (rsi) {
+    var rChart2 = echarts.init(rsi, null, { renderer: 'svg' });
+    rChart2.setOption({
+      animation: false,
+      grid: { left: 10, right: 20, top: 36, bottom: 26, containLabel: true },
+      tooltip: { appendToBody: true, trigger: 'axis', valueFormatter: function (v) { return v + '%'; } },
+      legend: {
+        top: 0, right: 0, itemWidth: 10, itemHeight: 10,
+        textStyle: { color: muted, fontSize: 11 }
+      },
+      xAxis: {
+        type: 'category',
+        data: ['SWE-bench Verified', 'Polyglot'],
+        axisLine: { lineStyle: { color: rule } },
+        axisTick: { show: false },
+        axisLabel: { color: ink, fontSize: 11 }
+      },
+      yAxis: {
+        type: 'value', max: 55,
+        axisLabel: { color: muted, fontSize: 11, formatter: '{value}%' },
+        splitLine: { lineStyle: { color: rule } }
+      },
+      series: [
+        {
+          name: '自我改进起点', type: 'bar', barWidth: 26,
+          itemStyle: { color: muted + '80' },
+          label: { show: true, position: 'top', color: muted, fontSize: 10, formatter: '{c}%' },
+          data: [20.0, 14.2]
+        },
+        {
+          name: '自我改进后', type: 'bar', barWidth: 26,
+          itemStyle: { color: accent },
+          label: { show: true, position: 'top', color: accent, fontSize: 10, formatter: '{c}%' },
+          data: [50.0, 30.7]
+        }
+      ]
+    });
+    window.addEventListener('resize', function () { rChart2.resize(); });
   }
 })();

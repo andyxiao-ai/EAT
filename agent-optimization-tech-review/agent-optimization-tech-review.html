@@ -76,7 +76,7 @@
   thead th{font-family:var(--mono);font-size:.68rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-top:1.5px solid var(--ink);border-bottom:1.5px solid var(--ink)}
   tbody tr:hover{background:var(--bg2)}
   td.num{font-family:var(--mono);white-space:nowrap}
-  td.key{font-weight:600;color:var(--ink)}
+  td.key{font-weight:600;color:var(--ink);white-space:nowrap}
   td.tech{color:var(--accent2)}
 
   /* ------ callout ------ */
@@ -132,7 +132,7 @@
 <body>
 
 <div class="topbar"><div class="topbar-in">
-  <span class="brand">Agent< i>·</i>Optimization</span>
+  <span class="brand">Agent<i>·</i>Optimization</span>
   <span class="kicker">算子 / 推理引擎 / 调度</span>
   <span class="spacer"></span>
   <span class="kicker">2022 – 2026</span>
@@ -141,17 +141,17 @@
 <div class="cover">
   <div class="kicker">技术脉络综述 · Literature Map</div>
   <h1>Agent 优化算子开发<br/>与推理引擎：四年演化全景</h1>
-  <div class="subtitle">从传统 autotuning、LLM 单 agent 到多 agent 自演化系统的完整脉络，附 RSI 概念搜索说明</div>
-  <div class="meta">Arxiv · MLSys · OSDI · ASPLOS · 2022 — 2026 · 手动整理</div>
+  <div class="subtitle">从传统 autotuning、LLM 单 agent 到多 agent 自演化系统，并补齐 RSI（递归自我改进）完整文献线</div>
+  <div class="meta">Arxiv · MLSys · OSDI · ASPLOS · ICLR · 2022 — 2026 · 手动整理</div>
   <div class="tags">
     <span>CUDA / Triton</span><span>Kernel Optimization</span><span>LLM Inference Engine</span>
-    <span>Multi-Agent</span><span>Auto-Tuning</span><span>Evolutionary Search</span>
+    <span>Multi-Agent</span><span>Auto-Tuning</span><span>Recursive Self-Improvement</span>
   </div>
   <div class="stats">
-    <div><div class="num">28</div><div class="lbl">核心论文</div></div>
-    <div><div class="num">4</div><div class="lbl">技术阶段</div></div>
+    <div><div class="num">48</div><div class="lbl">核心论文</div></div>
+    <div><div class="num">5</div><div class="lbl">技术方向</div></div>
     <div><div class="num">10×</div><div class="lbl">最高加速比</div></div>
-    <div><div class="num">3+</div><div class="lbl">搜索策略家族</div></div>
+    <div><div class="num">4</div><div class="lbl">RSI 演化层级</div></div>
   </div>
 </div>
 
@@ -165,7 +165,7 @@
   <a href="#taxonomy">方法学谱系</a>
   <a href="#compare">关键对比</a>
   <a href="#trends">趋势洞察</a>
-  <a href="#rsi">RSI 搜索</a>
+  <a href="#rsi">RSI 专题</a>
   <a href="#refs">参考文献</a>
 </nav>
 
@@ -175,19 +175,20 @@
   <p>2022 年以来，以 <code>Triton</code>、<code>vLLM</code>、<code>FlashInfer</code> 为代表的工程系统显著降低了 GPU 算子开发与 LLM 推理引擎构建的门槛。然而，这些系统本身又提出了一个更难的问题：<b>谁来优化这些优化器？</b></p>
   <p>大语言模型 agent 的出现为这个问题提供了新范式。从最初的"LLM 写 CUDA 代码 + 编译反馈修正"的单 agent 闭环，演化到"多角色分工 + 持久知识文件"的团队，再到最近"让 agent 自己改写整个推理引擎"的系统级自演化，四年间这一方向经历了<b>从工具到同伴再到宿主</b>的三层跃迁。</p>
   <div class="callout">
-    <b>本综述覆盖四篇综述中最活跃的三条主线</b>：
+    <b>本综述覆盖五条主线</b>：
     ① <b>Agent 优化 CUDA/Kernel 算子</b>（16 篇核心论文）；
     ② <b>Agent 优化 LLM 推理引擎</b>（让 agent 改 FlashInfer / SGLang / vLLM 本身）；
-    ③ <b>Agent 优化推理调度与服务层</b>（KV cache、speculative decoding、agentic serving）。
-    额外梳理 <b>基础方法谱系</b>（Reflexion → EAT 演化）和 <b>RSI 概念搜索说明</b>。
+    ③ <b>Agent 优化推理调度与服务层</b>（KV cache、speculative decoding、agentic serving）；
+    ④ <b>基础方法谱系</b>（Reflexion → EAT 演化）；
+    ⑤ <b>RSI 递归自我改进</b>（Recursive Self-Improvement：从 Gödel Machine 到 DGM / HGM / SEAL，再到 2026 年的 AREX、Terminal-RSI、SwarmRSI）。
   </div>
   <p>论文入选标准：① 直接使用 LLM agent 或类似 agentic 框架优化目标；② 有可验证的实验结果；③ 2022–2026 年发表于顶级会议 / 主流 arxiv 预印本。剔除了仅用 LLM 作为 prompt generator 但没有反馈闭环的工作。</p>
   <h4>本文覆盖的论文分类占比</h4>
   <div class="grid-2">
     <div class="chart chart-sml" id="chart-cat"></div>
     <div>
-      <p>四个方向合计 <b>28 篇核心论文</b>（不含被引用但未直接优化系统的基准工作）。算子优化方向最活跃（16 篇），因为目标相对可界定、评测容易自动化；推理引擎方向虽然起步晚（SEIS 2026.10）但影响力最大——3.27× throughput 对整个领域是"存在性证明"级别的结果；调度层稍显分散，主要成果来自 2025 后 agentic LLM serving 的实际部署压力。</p>
-      <p>基础方法谱系的 10 篇工作提供了更广阔的方法论背景——Reflexion / Voyager / FunSearch 不直接优化算子或引擎，但其演化思路是 EAT / SEIS 的直接祖先。</p>
+      <p>五个方向合计约 <b>48 篇核心论文</b>（不含被引用但未直接优化目标系统的基准工作；部分工作跨类重复计入）。算子优化方向最活跃（16 篇），因为目标相对可界定、评测容易自动化；推理引擎方向虽然起步晚（SEIS 2026.10）但影响力最大——3.27× throughput 对整个领域是"存在性证明"级别的结果；RSI 方向文献量最大且增长最快（20 篇），但绝大多数集中在通用 agent / 代码 / 模型权重，尚未下沉到算子与推理引擎。</p>
+      <p>基础方法谱系提供了更广阔的方法论背景——Reflexion / Voyager / FunSearch 不直接优化算子或引擎，但其演化思路是 EAT / SEIS 的直接祖先；RSI 则提供了"为什么可以反复自我改进"的理论骨架。</p>
     </div>
   </div>
 </section>
@@ -195,7 +196,7 @@
 <!-- ====== 时间线 ====== -->
 <section id="timeline">
   <h2>时间线 · 四阶段演化</h2>
-  <p>从 2022 年的传统 autotuning 到 2026 年的多 agent 系统级自演化，可清晰划分为四个阶段：</p>
+  <p>从 2022 年的传统 autotuning 到 2026 年的多 agent 系统级自演化，可清晰划分为四个阶段。图中另加一行 <b>RSI 自我改进</b>，因为它不是某个阶段，而是贯穿全程的方法论基座——2024 年 Gödel Agent / ADAS 起步，2025 年 DGM / HGM / SEAL 成型，2026 年出现以 RSI 命名的预印本潮。</p>
   <div class="grid-2">
     <div>
       <h4>第一阶段：传统 autotuning（2022）</h4>
@@ -527,7 +528,7 @@
   <h2>趋势洞察 · 五个方向性判断</h2>
 
   <h3>① 演化粒度持续扩大：代码行 → 团队 → 引擎</h3>
-  <p>这四年最显著的趋势是演化对象（unit of evolution）从局部代码扩展到跨文件系统：FunSearch 演化程序种群的行级代码 → EAT 演化团队角色配置 T=(R,Π,M) → SEIS 演化整个推理引擎源码。演化粒度越大，agent 能修改的系统边界越广，但评估也越困难。</p>
+  <p>这四年最显著的趋势是演化对象（unit of evolution）从局部代码扩展到跨文件系统：FunSearch 演化程序种群的行级代码 → EAT 演化团队角色配置 T=(R,Π,M) → SEIS 演化整个推理引擎源码。演化粒度越大，agent 能修改的系统边界越广，但评估也越困难。用 RSI 的层级语言说，这条轨迹就是 L1（改自身代码）→ L3（改系统与组织）的爬升；RSI 专题一节给出了完整阶梯。</p>
 
   <h3>② "多 agent"不是银弹，诊断驱动才是</h3>
   <p>固定多角色团队的结果其实令人失望：EAT 论文里固定四角色团队仅达专家性能的 55%（0.31×），远低于演化团队的 1.21×。真正重要的是 <b>演化能力 + 诊断机制</b>——知道什么时候改、改什么，比一开始配好哪些角色更重要。这一点对调度层同样适用：AutoLLix / HexAGenT 都是"诊断 + 重决策"而非"固定分工"。</p>
@@ -544,50 +545,169 @@
 
 <!-- ====== RSI ====== -->
 <section id="rsi">
-  <h2>RSI 概念搜索说明</h2>
-  <p>您提到的"RSI"概念我尝试了多种缩写变体搜索，但未找到明确匹配的已发表论文或大会报告。以下是我搜索过的可能含义，按可能性从高到低排列：</p>
-
-  <ul class="rsi-poss">
-    <li>RSI = Region-Specific Inference</li>
-    <li>RSI = Runtime Scheduling Intelligence</li>
-    <li>RSI = Reasoning Scheduling Intelligence</li>
-    <li>RSI = Reinforcement System Inference</li>
-    <li>RSI = Robust Scheduling Intelligence</li>
-    <li>RSI = Runtime System Intelligence</li>
-    <li>RSI = Rethinking System-level Inference</li>
-    <li>RSI = Reasoning System Inference</li>
-  </ul>
-
-  <h3>搜索覆盖的数据源</h3>
-  <ul>
-    <li>arXiv 全量（2024–2026）：含 cs.AI / cs.LG / cs.OS / cs.AR / cs.DC / cs.CL</li>
-    <li>Semantic Scholar 全文索引</li>
-    <li>MLSys 2026 · OSDI 2026 · ASPLOS 2025 · SOSP 2025 proceedings</li>
-    <li>vLLM · SGLang · FlashInfer · LlamaIndex · Microsoft Research blogs</li>
-    <li>"agent optimization inference" / "scheduling inference LLM" / "system optimization LLM" 等 keyword 组合</li>
-  </ul>
+  <h2>RSI 专题 · 递归自我改进（Recursive Self-Improvement）</h2>
+  <p>RSI 的准确全称是 <b>Recursive Self-Improvement（递归自我改进）</b>：系统改进自身能力，且改进后的版本能够把同一改进能力再次施加到自身，从而形成复利式的能力增长。它的关键不在"自我改进"本身（任何学习系统都在改变自己），而在<b>提高改进速度与改进质量的那个部件本身也被改进了</b>。</p>
+  <p>与之相对的是 <b>bounded self-refinement（有界自我精炼）</b>：对同一个答案反复打磨，收敛、可评估、已工业化（Reflexion、self-consistency、best-of-N 都属于此类）。RSI 则是开放式的——改进对象可以是 agent 代码、模型权重、训练课程，甚至是评测本身。</p>
 
   <div class="callout">
-    <b>最可能的情况</b>：
-    ① 您可能记混了缩写——本综述中最接近 RSI 概念的是 <b>SEIS (Self-Evolving Inference Systems, arXiv:2610.04646)</b>，它与您说的"agent 优化推理引擎"方向完全吻合；
-    ② RSI 可能是某个工业界 / 内部技术名称或某个即将发布的预印本，目前还没进入公开索引；
-    ③ 也可能是我遗漏的某个非常新的概念——<b>如果您有更具体的上下文（例如看到 RSI 的演讲者或所在会议），我可以定向追踪</b>。
+    <b>一句话概括 2026 年的分歧</b>：有界自我精炼已被证明有效且可部署；开放式 RSI 仍受三重约束——<b>grounding（必须有外部验证信号）</b>、<b>collapse（自我训练会导致分布塌缩）</b>、<b>compute（每一轮改进都要付出推理算力）</b>。当前所有能跑通的 RSI 系统，都是在这三条约束上做工程妥协。
   </div>
 
-  <h3>与 RSI 最接近的已发表概念</h3>
+  <h3>RSI 的四个演化层级（本综述的核心框架）</h3>
   <div class="table-wrap">
     <table>
       <thead>
-        <tr><th>缩写</th><th>全称</th><th>与 RSI 的相似度</th><th>核心机制</th></tr>
+        <tr><th>层级</th><th>改进对象</th><th>代表系统</th><th>验证信号</th><th>风险</th></tr>
       </thead>
       <tbody>
-        <tr><td class="key">SEIS</td><td>Self-Evolving Inference Systems</td><td>★★★★★</td><td>让 agent 改写整个推理引擎源码（mini-sglang），Branching Chain 拓扑跨 20 个 session 演化，3.27× throughput</td></tr>
-        <tr><td class="key">EAT</td><td>Evolving Agent Teams</td><td>★★★★</td><td>多 agent 团队自演化优化 CUDA kernel，Supervisor 诊断驱动团队重组</td></tr>
-        <tr><td class="key">HexAGenT</td><td>Heterogeneous Agentic Scheduler</td><td>★★★</td><td>workflow-aware scheduler，把请求建模为 online DAG，agent 化调度</td></tr>
-        <tr><td class="key">K-Search</td><td>co-evolving world model</td><td>★★★</td><td>分离 planning 和 implementation，agent 化规划-实现循环</td></tr>
-        <tr><td class="key">MetaInfer</td><td>model/hardware adaptive</td><td>★★</td><td>在现有推理框架内自适应修改模型配置</td></tr>
+        <tr><td class="key">L0 答案级</td><td>同一问题的解</td><td>Reflexion、Self-Refine、Best-of-N</td><td>自评 / 外部判分</td><td>无法突破能力上限</td></tr>
+        <tr><td class="key">L1 代码级</td><td>Agent 自身代码（工具、循环、提示、架构）</td><td>STOP → ADAS → Gödel Agent → DGM → HGM → HyperAgents</td><td>Benchmark（SWE-bench / Polyglot）</td><td>sandbox 逃逸、目标错位</td></tr>
+        <tr><td class="key">L2 权重级</td><td>模型参数与训练数据</td><td>SEAL、Absolute Zero、R-Zero</td><td>下游任务准确率</td><td>灾难性遗忘、分布塌缩</td></tr>
+        <tr><td class="key">L3 系统级</td><td>团队组织 / 推理引擎 / 评测流程</td><td>EAT、SEIS、RSI-Master、AREX、Terminal-RSI</td><td>端到端吞吐 / 精度门 / 领域指标</td><td>reward hacking、归因困难</td></tr>
       </tbody>
     </table>
+  </div>
+  <p>这条分层恰好把本综述前四个方向接进同一个坐标系：<b>算子 agent（CUDAForge / OptiML）停在 L0–L1</b>，只会改代码、不会改自己；<b>EAT 升到 L3 的一个特例</b>（改团队组织）；<b>SEIS 是 L3 的另一个特例</b>（改整个引擎并让评测一起演化）。RSI 文献线则给出了这条阶梯的理论与实证基础。</p>
+
+  <h3>理论源头：从 Gödel Machine 到 STOP</h3>
+  <div class="card">
+    <h4>Gödel Machine</h4>
+    <div class="venue">Schmidhuber · 2003 / 2007 · 理论蓝图</div>
+    <div class="row"><div class="k">核心</div><div class="v">一个系统可以重写自身任意代码（包括"寻找重写"的那部分），但仅在能<b>证明</b>该重写会提升期望效用时才执行</div></div>
+    <div class="row"><div class="k">影响</div><div class="v">后续 Gödel Agent、Darwin Gödel Machine、Huxley-Gödel Machine 都沿用这个名字与"先证明/先验证再采纳"的骨架；区别在于把"数学证明"换成了"benchmark 实测"</div></div>
+    <div class="card-actions"><a href="https://arxiv.org/abs/cs/0309048" target="_blank">arxiv</a></div>
+  </div>
+  <div class="card">
+    <h4>STOP · Self-Taught Optimizer</h4>
+    <div class="venue">Zelikman et al. · 2023 · arXiv:2310.02304</div>
+    <div class="row"><div class="k">核心</div><div class="v">让 LLM 改进"调用 LLM 的那层 scaffolding"，再用改进后的 scaffolding 改进自己——第一个在真实 LLM 上跑通的递归自我改进雏形</div></div>
+    <div class="row"><div class="k">意义</div><div class="v">把 RSI 从"理论 + 安全议题"变成"可以写代码实验的对象"，是 ADAS / DGM 的直接前身</div></div>
+    <div class="card-actions"><a href="https://arxiv.org/abs/2310.02304" target="_blank">arxiv</a></div>
+  </div>
+
+  <h3>代码级自我改写（L1）：2024–2026 的主战场</h3>
+  <div class="card">
+    <h4>Gödel Agent</h4>
+    <div class="venue">Yin et al. · 2024 · arXiv:2410.04444</div>
+    <div class="row"><div class="k">核心</div><div class="v">自指式框架：LLM 通过高层目标提示，动态修改自己的逻辑与行为，<b>不依赖预定义 routine 或固定优化算法</b></div></div>
+    <div class="row"><div class="k">结果</div><div class="v">在多领域实现持续自我改进，超过手工设计的 agent</div></div>
+    <div class="card-actions"><a href="https://arxiv.org/abs/2410.04444" target="_blank">arxiv</a></div>
+  </div>
+  <div class="card">
+    <h4>ADAS · Automated Design of Agentic Systems</h4>
+    <div class="venue">Hu et al. · 2024 · arXiv:2408.08435</div>
+    <div class="row"><div class="k">核心</div><div class="v">Meta-Agent 在<b>代码空间</b>在代码空间中搜索新 agent 架构，用 archive 保存历史候选并作为后续搜索的起点</div></div>
+    <div class="row"><div class="k">与 RSI 的关系</div><div class="v">"搜索 agent 架构"而非"搜索解法"——第一次把 agent 设计本身变成可搜索对象</div></div>
+    <div class="card-actions"><a href="https://arxiv.org/abs/2408.08435" target="_blank">arxiv</a></div>
+  </div>
+  <div class="card">
+    <h4>Darwin Gödel Machine (DGM)</h4>
+    <div class="venue">Zhang et al. · 2025 · arXiv:2505.22954 · ICLR 2026</div>
+    <div class="row"><div class="k">机制</div><div class="v">维护一个<b>自我修改 agent 的 archive</b>，每个变体由 LLM 生成代码补丁（工具、上下文管理、peer-review 机制），再用 benchmark 实测筛选，成功者成为下一轮的"祖先"</div></div>
+    <div class="row"><div class="k">结果</div><div class="v">SWE-bench 从 <b>20.0% → 50.0%</b>；Polyglot 从 <b>14.2% → 30.7%</b>，显著优于无自我改进 / 无开放式探索的基线</div></div>
+    <div class="row"><div class="k">安全</div><div class="v">全程 sandbox + 人工监督，论文本身也把"自我改写带来的失控风险"作为一等议题</div></div>
+    <div class="card-actions"><a href="https://arxiv.org/abs/2505.22954" target="_blank">arxiv</a></div>
+  </div>
+  <div class="card">
+    <h4>Huxley-Gödel Machine (HGM)</h4>
+    <div class="venue">Wang et al. · 2025 · arXiv:2510.21614</div>
+    <div class="row"><div class="k">核心</div><div class="v">用 <b>metaproductivity（CMP）</b> 估计一个 agent"改进自己改进能力"的潜力，并据此在自我修改树上搜索——从"看当前分数"转向"看这条血脉的未来潜力"</div></div>
+    <div class="row"><div class="k">结果</div><div class="v">在 SWE-bench Verified / Polyglot 上超过 DGM 等先前方法，且 <b>CPU 小时更少</b></div></div>
+    <div class="card-actions"><a href="https://arxiv.org/abs/2510.21614" target="_blank">arxiv</a></div>
+  </div>
+  <div class="card">
+    <h4>HyperAgents · The View from Nowhere</h4>
+    <div class="venue">2026 · arXiv:2603.19461 / arXiv:2610.36660</div>
+    <div class="row"><div class="k">HyperAgents</div><div class="v">指出 DGM 的自我改进指令仍由<b>手工固定机制</b>产生，HyperAgents 让"如何产生改进指令"也进入被优化的范围</div></div>
+    <div class="row"><div class="k">View from Nowhere</div><div class="v">从"个体中心"转向<b>种群中心</b>的 agent 演化，讨论 HGM 用后代表现估计血脉潜力的做法及其偏差</div></div>
+    <div class="card-actions"><a href="https://arxiv.org/abs/2603.19461" target="_blank">arxiv</a> · <a href="https://arxiv.org/abs/2610.36660" target="_blank">arxiv</a></div>
+  </div>
+
+  <h3>权重与数据级自我改进（L2）</h3>
+  <div class="card">
+    <h4>SEAL · Self-Adapting Language Models</h4>
+    <div class="venue">Zweiger et al. · 2025 · arXiv:2506.10943 · NeurIPS 2025</div>
+    <div class="row"><div class="k">核心</div><div class="v">模型针对新输入生成 <b>self-edit</b>（重组信息、指定优化超参、调用工具做数据增强），再通过 SFT 变成<b>持久权重更新</b>——自我改进不再停留在上下文，而写进参数</div></div>
+    <div class="row"><div class="k">闭环</div><div class="v">用 RL 奖励"self-edit 之后的下游表现"，从而学会"怎么给自己写训练数据"</div></div>
+    <div class="card-actions"><a href="https://arxiv.org/abs/2506.10943" target="_blank">arxiv</a></div>
+  </div>
+  <div class="card">
+    <h4>Absolute Zero · R-Zero</h4>
+    <div class="venue">2025 · arXiv:2505.03335 / arXiv:2508.05004</div>
+    <div class="row"><div class="k">Absolute Zero</div><div class="v">零外部数据：模型自己提出任务、自己求解、用代码执行器验证，形成"自博弈 + 自课程"的推理能力增长</div></div>
+    <div class="row"><div class="k">R-Zero</div><div class="v">从零数据自演化推理：Challenger 生成"刚好超出当前能力"的题目，Solver 求解，双方共同进步——把课程难度也变成递归改进的一部分</div></div>
+    <div class="card-actions"><a href="https://arxiv.org/abs/2505.03335" target="_blank">arxiv</a> · <a href="https://arxiv.org/abs/2508.05004" target="_blank">arxiv</a></div>
+  </div>
+  <div class="note">
+    <b>L1 与 L2 的取舍</b>：改代码（L1）无需训练、反馈即时、可 sandbox，但受限于基座模型能力；改权重（L2）能真正提升能力上限，但需要训练算力、易灾难性遗忘、也更容易分布塌缩。2026 年的实际系统多数把两者混合：代码级做架构搜索，权重级做能力沉淀。
+  </div>
+
+  <h3>2026 前沿：RSI 进入具体领域（L3）</h3>
+  <div class="card">
+    <h4>RSI-Master</h4>
+    <div class="venue">Du et al. · SJTU / CMU / UWaterloo · 2026 · arXiv:2609.35561</div>
+    <div class="row"><div class="k">问题</div><div class="v">"自主改进模型"的瓶颈不是想法不够，而是<b>实验组织混乱</b>：假设、消融、复现无法沉淀</div></div>
+    <div class="row"><div class="k">做法</div><div class="v">把实验结构化：假设登记 → 受控实验 → 结果归档 → 下一轮假设，让 agent 的自我改进循环有可审计的骨架</div></div>
+    <div class="card-actions"><a href="https://arxiv.org/abs/2609.35561" target="_blank">arxiv</a></div>
+  </div>
+  <div class="card">
+    <h4>AREX / AREX-2</h4>
+    <div class="venue">2026 · arXiv:2607.21461 / arXiv:2609.38288</div>
+    <div class="row"><div class="k">AREX</div><div class="v">深度研究场景的 RSI：内层研究循环搜集证据、构建暂定答案；外层自我改进循环按约束逐项审计，找出未解决主张并发起定向补充研究。学习一个<b>自主上下文更新工具</b>，在长时程中维持紧凑的改进状态</div></div>
+    <div class="row"><div class="k">AREX-2</div><div class="v">把"自我改进"拆成两种能力：<b>反思（产出比当前更好的解）</b>与<b>长时程执行（让迭代多轮后仍有效）</b>，用语料与训练设计分别强化</div></div>
+    <div class="card-actions"><a href="https://arxiv.org/abs/2607.21461" target="_blank">arxiv</a> · <a href="https://arxiv.org/abs/2609.38288" target="_blank">arxiv</a></div>
+  </div>
+  <div class="card">
+    <h4>Terminal-RSI</h4>
+    <div class="venue">2026 · arXiv:2610.22192</div>
+    <div class="row"><div class="k">核心</div><div class="v">终端 agent 的 RSI：<b>Recursive Self-Rewrite (RSR)</b> 把验证器结果转成策略更新，<b>Recursive Policy-Refine (RPR)</b> 继承 critic 继续精炼；提出 TB-GAE 在交互轮次间保留 token 级 baseline</div></div>
+    <div class="row"><div class="k">意义</div><div class="v">把 RSI 从"改代码/改权重"扩展到"改交互策略"，且解决长轨迹的 credit assignment</div></div>
+    <div class="card-actions"><a href="https://arxiv.org/abs/2610.22192" target="_blank">arxiv</a></div>
+  </div>
+  <div class="card">
+    <h4>SwarmRSI · RSIAgent</h4>
+    <div class="venue">2026 · arXiv:2610.20431 / arXiv:2609.15364</div>
+    <div class="row"><div class="k">SwarmRSI</div><div class="v">科学发现场景：维护 <b>hypothesis frontier</b> 与 <b>program frontier</b> 两个前沿，Recursive Swarm Evolution 决定下一步是修假设还是修程序，所有结果回写共享图</div></div>
+    <div class="row"><div class="k">RSIAgent</div><div class="v">新数字环境、无外部任务奖励：课程 / 执行 / 验证三角色协作，broad-then-deep 探索，用环境反馈构建可复用记忆。训练-free</div></div>
+    <div class="card-actions"><a href="https://arxiv.org/abs/2610.20431" target="_blank">arxiv</a> · <a href="https://arxiv.org/abs/2609.15364" target="_blank">arxiv</a></div>
+  </div>
+  <div class="card">
+    <h4>Dream-RSI · MetaAI Recursive Self-Design</h4>
+    <div class="venue">2026 · 技术报告 / arXiv:2606.09663</div>
+    <div class="row"><div class="k">Dream-RSI</div><div class="v">"通过演化世界实现递归自我改进"——让 agent 同时改进它所处的环境模型与自身策略，而不只是改代码</div></div>
+    <div class="row"><div class="k">0-to-1 to 1-to-N</div><div class="v">为 MetaAI 递归自我设计提供可复现的工程证据，讨论"何时从单点突破进入规模复制"</div></div>
+    <div class="card-actions"><a href="https://www.dream-rsi.com/" target="_blank">tech report</a> · <a href="https://arxiv.org/abs/2606.09663" target="_blank">arxiv</a></div>
+  </div>
+
+  <h3>综述与路线图</h3>
+  <div class="card">
+    <h4>Recursive Self-Improvement in AI: From Bounded Self-Refinement to Autonomous Research Loops</h4>
+    <div class="venue">2026 · arXiv:2607.07663 · Taxonomy / Survey</div>
+    <div class="row"><div class="k">贡献</div><div class="v">给出本领域第一份系统 taxonomy：把<b>有界自我精炼</b>（收敛、可评估、已工业化）与<b>开放式 RSI</b>（受 grounding、collapse、compute 三重约束）分开，并单列"自我评估"作为独立类别</div></div>
+    <div class="row"><div class="k">适合</div><div class="v">建立全局地图时先读这一篇，再按图索骥读具体系统</div></div>
+    <div class="card-actions"><a href="https://arxiv.org/abs/2607.07663" target="_blank">arxiv</a></div>
+  </div>
+  <div class="card">
+    <h4>The Last AI Built by Humans: Toward Genuine Recursive Self-Improvement</h4>
+    <div class="venue">2026 · arXiv:2609.11873 · Position + Roadmap</div>
+    <div class="row"><div class="k">核心</div><div class="v">用 <b>Headroom-Closed Index (HCI)</b> 度量现有 LLM 与"真正 RSI"的差距，并给出五级路线：改进-执行自主 → 改进-策略自主 → 经验获取自主 → 环境适应自主 → 递归元改进</div></div>
+    <div class="row"><div class="k">价值</div><div class="v">把 RSI 从口号拆成可测量的阶段，是判断"某系统算不算 RSI"的好尺子</div></div>
+    <div class="card-actions"><a href="https://arxiv.org/abs/2609.11873" target="_blank">arxiv</a></div>
+  </div>
+
+  <h3>关键数据：自我改进的实测增益</h3>
+  <div class="chart chart-sml" id="chart-rsi"></div>
+  <div class="chart-sub" style="font-family:var(--mono);font-size:.7rem;letter-spacing:.04em;color:var(--muted);margin:.3rem 0 1rem">DGM 在两个 coding benchmark 上的自增益（arXiv:2505.22954）；HGM 在同等或更少 CPU 小时下进一步超过 DGM。</div>
+
+  <h3>RSI 与本综述的连接：三处直接接口</h3>
+  <div class="grid-3">
+    <div class="note"><b>① 演化对象的迁移</b><br/>RSI 文献演化的是 agent 代码（DGM）与权重（SEAL）；本综述的 EAT 演化团队组织、SEIS 演化推理引擎。同一套"archive + 验证器 + 继承"骨架，只是对象从 agent 换成了系统。</div>
+    <div class="note"><b>② 验证器是共同瓶颈</b><br/>DGM 靠 SWE-bench 判分、SEAL 靠下游准确率、SEIS 靠 numerical + downstream 双门。所有 RSI 系统的上限都由验证信号的可靠性决定——这也是 SEIS 发现 reward hacking 的原因。</div>
+    <div class="note"><b>③ 长时程继承是共同解法</b><br/>DGM 的 archive、HGM 的 lineage 统计、EAT 的 LEARNINGS.md、SEIS 的 session report、RSI-Master 的实验登记——本质都是"把经验写进环境，让下一代继承"。</div>
+  </div>
+
+  <div class="callout">
+    <b>检索说明</b>：上一版报告把 RSI 误当作"推理引擎/调度"语境下的缩写去检索，因此只给出变体猜测。补齐后确认：RSI 在该领域是成熟概念，2026 年更出现一批直接以 RSI 命名的预印本（SwarmRSI、Terminal-RSI、RSI-Master、RSIAgent、Dream-RSI），并已有专门 taxonomy 与路线图论文。本节即为修正后的完整文献线。
   </div>
 </section>
 
@@ -624,10 +744,31 @@
         <li id="cite-24">arXiv:2609.33224. <span class="src-title">PackServe: SLO-Aware Request Scheduling for Agentic LLM Serving at Scale</span>. 2026. <a class="src-url" href="https://arxiv.org/abs/2609.33224" target="_blank">https://arxiv.org/abs/2609.33224</a></li>
         <li id="cite-25">arXiv:2603.07917. <span class="src-title">SageSched: Efficient LLM Scheduling Confronting Demand Uncertainty and Hybridity</span>. 2026. <a class="src-url" href="https://arxiv.org/abs/2603.07917" target="_blank">https://arxiv.org/abs/2603.07917</a></li>
         <li id="cite-26">arXiv:2610.28998. <span class="src-title">FlashNext-RL: A System Optimization Study for Long-Horizon Agentic RL of Qwen3.8-Flash-Next</span>. 2026. <a class="src-url" href="https://arxiv.org/abs/2610.28998" target="_blank">https://arxiv.org/abs/2610.28998</a></li>
+        <li id="cite-27">Schmidhuber J. <span class="src-title">Gödel Machines: Self-Referential Universal Problem Solvers Making Provably Optimal Self-Improvements</span>. 2003 / 2007. <a class="src-url" href="https://arxiv.org/abs/cs/0309048" target="_blank">https://arxiv.org/abs/cs/0309048</a></li>
+        <li id="cite-28">Zelikman E et al. <span class="src-title">STOP: Self-Taught Optimizer (Recursively Self-Improving Code Generation)</span>. arXiv:2310.02304, 2023. <a class="src-url" href="https://arxiv.org/abs/2310.02304" target="_blank">https://arxiv.org/abs/2310.02304</a></li>
+        <li id="cite-29">Yin X et al. <span class="src-title">Gödel Agent: A Self-Referential Agent Framework for Recursive Self-Improvement</span>. arXiv:2410.04444, 2024. <a class="src-url" href="https://arxiv.org/abs/2410.04444" target="_blank">https://arxiv.org/abs/2410.04444</a></li>
+        <li id="cite-30">Hu S et al. <span class="src-title">ADAS: Automated Design of Agentic Systems</span>. arXiv:2408.08435, 2024. <a class="src-url" href="https://arxiv.org/abs/2408.08435" target="_blank">https://arxiv.org/abs/2408.08435</a></li>
+        <li id="cite-31">Zhang J et al. <span class="src-title">Darwin Gödel Machine: Open-Ended Evolution of Self-Improving Agents</span>. arXiv:2505.22954, 2025 (ICLR 2026). <a class="src-url" href="https://arxiv.org/abs/2505.22954" target="_blank">https://arxiv.org/abs/2505.22954</a></li>
+        <li id="cite-32">Wang W et al. <span class="src-title">Huxley-Gödel Machine: Human-Level Coding Agent Development by an Approximation of the Optimal Self-Improving Machine</span>. arXiv:2510.21614, 2025. <a class="src-url" href="https://arxiv.org/abs/2510.21614" target="_blank">https://arxiv.org/abs/2510.21614</a></li>
+        <li id="cite-33">arXiv:2603.19461. <span class="src-title">HyperAgents: Beyond Handcrafted Self-Improvement Instructions</span>. 2026. <a class="src-url" href="https://arxiv.org/abs/2603.19461" target="_blank">https://arxiv.org/abs/2603.19461</a></li>
+        <li id="cite-34">arXiv:2610.36660. <span class="src-title">The View from Nowhere: Population-Centered Agent Evolution</span>. 2026. <a class="src-url" href="https://arxiv.org/abs/2610.36660" target="_blank">https://arxiv.org/abs/2610.36660</a></li>
+        <li id="cite-35">Zweiger A et al. <span class="src-title">SEAL: Self-Adapting Language Models</span>. arXiv:2506.10943, 2025 (NeurIPS 2025). <a class="src-url" href="https://arxiv.org/abs/2506.10943" target="_blank">https://arxiv.org/abs/2506.10943</a></li>
+        <li id="cite-36">Zhao A et al. <span class="src-title">Absolute Zero: Reinforced Self-play Reasoning with Zero Data</span>. arXiv:2505.03335, 2025. <a class="src-url" href="https://arxiv.org/abs/2505.03335" target="_blank">https://arxiv.org/abs/2505.03335</a></li>
+        <li id="cite-37">Huang C et al. <span class="src-title">R-Zero: Self-Evolving Reasoning LLM from Zero Data</span>. arXiv:2508.05004, 2025. <a class="src-url" href="https://arxiv.org/abs/2508.05004" target="_blank">https://arxiv.org/abs/2508.05004</a></li>
+        <li id="cite-38">Du Y, Yang X, Zhou Z et al. <span class="src-title">RSI-Master: Structuring Experiments to Guide Autonomous Model Improvement</span>. SJTU / CMU / UWaterloo. arXiv:2609.35561, 2026. <a class="src-url" href="https://arxiv.org/abs/2609.35561" target="_blank">https://arxiv.org/abs/2609.35561</a></li>
+        <li id="cite-39">arXiv:2607.21461. <span class="src-title">AREX: Towards a Recursively Self-Improving Agent for Deep Research</span>. 2026. <a class="src-url" href="https://arxiv.org/abs/2607.21461" target="_blank">https://arxiv.org/abs/2607.21461</a></li>
+        <li id="cite-40">arXiv:2609.38288. <span class="src-title">AREX-2: Advancing Self-Improving Agents through Long-Horizon Reflective Tasks</span>. 2026. <a class="src-url" href="https://arxiv.org/abs/2609.38288" target="_blank">https://arxiv.org/abs/2609.38288</a></li>
+        <li id="cite-41">arXiv:2610.22192. <span class="src-title">Terminal-RSI: Recursive Self-Improving Terminal Agents via Recursive Self-Rewrite and Policy-Refine</span>. 2026. <a class="src-url" href="https://arxiv.org/abs/2610.22192" target="_blank">https://arxiv.org/abs/2610.22192</a></li>
+        <li id="cite-42">arXiv:2610.20431. <span class="src-title">SwarmRSI: Recursive Self-Improvement through Evolving Scientific Agent Swarm</span>. 2026. <a class="src-url" href="https://arxiv.org/abs/2610.20431" target="_blank">https://arxiv.org/abs/2610.20431</a></li>
+        <li id="cite-43">arXiv:2609.15364. <span class="src-title">RSIAgent: Autonomous Exploration for Recursive Self-improvement in New Environments</span>. 2026. <a class="src-url" href="https://arxiv.org/abs/2609.15364" target="_blank">https://arxiv.org/abs/2609.15364</a></li>
+        <li id="cite-44">Zheng T, Wu X, Zhang Z et al. <span class="src-title">Dream-RSI: Recursive Self-Improvement through Evolving Worlds</span>. Technical Report, 2026. <a class="src-url" href="https://www.dream-rsi.com/" target="_blank">https://www.dream-rsi.com/</a></li>
+        <li id="cite-45">arXiv:2606.09663. <span class="src-title">From 0-to-1 to 1-to-N: Reproducible Engineering Evidence for MetaAI Recursive Self-Design</span>. 2026. <a class="src-url" href="https://arxiv.org/abs/2606.09663" target="_blank">https://arxiv.org/abs/2606.09663</a></li>
+        <li id="cite-46">arXiv:2607.07663. <span class="src-title">Recursive Self-Improvement in AI: From Bounded Self-Refinement to Autonomous Research Loops</span>. 2026. <a class="src-url" href="https://arxiv.org/abs/2607.07663" target="_blank">https://arxiv.org/abs/2607.07663</a></li>
+        <li id="cite-47">arXiv:2609.11873. <span class="src-title">The Last AI Built by Humans: Toward Genuine Recursive Self-Improvement</span>. 2026. <a class="src-url" href="https://arxiv.org/abs/2609.11873" target="_blank">https://arxiv.org/abs/2609.11873</a></li>
       </ol>
     </div>
     <div class="note" style="margin-top:1.5rem">
-      <b>编译说明</b>：本综述手动整理自 2022–2026 年 arxiv 与顶级会议论文。RSI 概念未能在公开索引中定位，详见 <a href="#rsi">RSI 搜索说明</a>。部分论文实验数字来源不同（基线定义、cost budget、评测设置），横向对比时请注意阅读原始数值表。
+      <b>编译说明</b>：本综述手动整理自 2022–2026 年 arxiv 与顶级会议论文，共 47 条引用。RSI 部分已补齐为完整文献线（见 <a href="#rsi">RSI 专题</a>）。部分论文实验数字来源不同（基线定义、cost budget、评测设置），横向对比时请注意阅读原始数值表。
     </div>
   </footer>
 </section>
