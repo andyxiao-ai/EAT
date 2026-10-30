@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RSI 四篇精读 · 递归自我改进的技术脉络与边界</title>
+<script src="./_shared/js/echarts.min.js"></script>
+<style>
+  :root{
+    --bg:#FAF8F3;--bg2:#F2EEE5;--ink:#1B1A17;--muted:#6E6860;--rule:#DDD6C8;
+    --accent:#B2431E;--accent2:#1D5A66;--accent-soft:#F5E7DF;--maxw:1160px;
+    --mono:"IBM Plex Mono",Menlo,Consolas,monospace;
+    --display:"Instrument Serif","Songti SC","Noto Serif CJK SC",Georgia,serif;
+    --body:"IBM Plex Serif","Songti SC","Noto Serif CJK SC",Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.72;max-width:var(--maxw);margin-left:auto;margin-right:auto;padding:0 2rem 4rem;-webkit-font-smoothing:antialiased}
+  h1,h2,h3,h4{font-family:var(--display);font-weight:400;line-height:1.2}
+  h1{font-size:clamp(2.6rem,5.5vw,4.6rem);letter-spacing:-.025em;margin:.3em 0 .1em}
+  h2{font-size:clamp(1.6rem,2.8vw,2.2rem);margin:2.8em 0 .7em;border-bottom:1px solid var(--rule);padding-bottom:.35em}
+  h3{font-size:clamp(1.15rem,1.6vw,1.4rem);margin:1.6em 0 .4em;color:var(--accent2)}
+  h4{font-size:.95rem;margin:1em 0 .35em;font-family:var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  a{color:var(--accent);text-decoration:none;border-bottom:1px solid var(--accent-soft)}
+  a:hover{color:var(--ink);border-color:var(--ink)}
+  p{margin:.6em 0}
+  code{font-family:var(--mono);font-size:.84em;background:var(--bg2);padding:.1em .35em;border-radius:3px}
+  hr.section{border:0;border-top:1px solid var(--rule);margin:2rem 0}
+
+  /* ------ top bar ------ */
+  .topbar{position:sticky;top:0;z-index:50;background:rgba(250,248,243,.94);border-bottom:1px solid var(--rule);backdrop-filter:blur(8px);margin:0 -2rem;padding:.55rem 2rem}
+  .topbar-in{max-width:var(--maxw);margin:0 auto;display:flex;align-items:center;gap:1rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase}
+  .brand{font-weight:700}
+  .brand i{color:var(--accent);font-style:normal}
+  .spacer{flex:1}
+  .topbar .kicker{color:var(--muted)}
+
+  /* ------ cover ------ */
+  .cover{margin:4rem auto 2.2rem;padding:3rem 0 2rem;border-bottom:1px solid var(--rule)}
+  .cover .kicker{font-family:var(--mono);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+  .cover .subtitle{font-size:clamp(1.05rem,2vw,1.3rem);color:var(--muted);margin:.4em 0 1.4em;font-style:italic}
+  .cover .meta{font-family:var(--mono);font-size:.72rem;letter-spacing:.04em;color:var(--muted)}
+  .cover .tags{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1rem}
+  .cover .tags span{border:1px solid var(--rule);padding:.2rem .55rem;font-family:var(--mono);font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border-radius:2px}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1.4rem;margin-top:2.5rem}
+  .stats .num{font-family:var(--display);font-size:2.4rem;color:var(--accent);line-height:1.1}
+  .stats .lbl{font-family:var(--mono);font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:.25rem}
+
+  /* ------ toc ------ */
+  .toc{display:flex;flex-wrap:wrap;gap:.4rem;padding:1.1rem 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);margin:1rem 0 2.5rem;position:sticky;top:39px;z-index:30;background:rgba(250,248,243,.94);backdrop-filter:blur(8px)}
+  .toc a{font-family:var(--mono);font-size:.68rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding:.25rem .55rem;border-radius:2px;border:0}
+  .toc a:hover{background:var(--bg2);color:var(--ink)}
+
+  /* ------ section ------ */
+  section{padding:2rem 0;border-top:1px solid var(--rule);scroll-margin-top:84px}
+  section:first-of-type{border-top:0}
+
+  /* ------ pick header ------ */
+  .pick-head{display:flex;align-items:baseline;gap:1rem;margin:2rem 0 1rem;flex-wrap:wrap}
+  .pick-num{font-family:var(--mono);font-size:.78rem;letter-spacing:.1em;color:var(--accent);border:1px solid var(--accent);padding:.15rem .45rem;border-radius:2px;white-space:nowrap}
+  .pick-meta{font-family:var(--mono);font-size:.7rem;color:var(--muted);letter-spacing:.04em}
+
+  /* ------ paper card ------ */
+  .card{border:1px solid var(--rule);border-radius:4px;background:var(--bg);padding:1.3rem 1.5rem;margin:1rem 0}
+  .card h5{font-family:var(--display);font-size:1.5rem;font-weight:400;margin:.2rem 0 .1rem}
+  .card .venue{font-family:var(--mono);font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:.8rem}
+  .card .row{display:grid;grid-template-columns:9rem 1fr;gap:.3rem 1rem;font-size:.92rem}
+  .card .row .k{font-family:var(--mono);font-size:.68rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+  .card .row .v{color:var(--ink)}
+  .card .actions{display:flex;gap:1rem;margin-top:.8rem;font-family:var(--mono);font-size:.73rem}
+  .card .actions a{border-bottom:0}
+  .card .actions a::after{content:" ↗"}
+
+  /* ------ thesis callout ------ */
+  .thesis{background:var(--bg2);border-left:3px solid var(--accent);padding:1.1rem 1.4rem;margin:1.2rem 0;border-radius:0 4px 4px 0}
+  .thesis b{color:var(--accent)}
+
+  /* ------ insight note ------ */
+  .note{background:var(--bg2);padding:.85rem 1.05rem;margin:1rem 0;border-radius:4px;font-size:.9rem}
+  .note b{color:var(--accent2)}
+  .note.q{border-left:2px solid var(--rule);padding-left:.9rem;background:transparent;font-style:italic;color:var(--muted)}
+
+  /* ------ chart ------ */
+  .chart{width:100%;min-height:280px;background:var(--bg);border:1px solid var(--rule);border-radius:4px;padding:1rem}
+  .chart-sml{min-height:220px}
+  .chart-lg{min-height:320px}
+  .chart-sub{font-family:var(--mono);font-size:.68rem;letter-spacing:.04em;color:var(--muted);margin:.35rem 0 1rem;padding-left:.1rem;border-left:2px solid var(--rule);padding-left:.6rem}
+
+  /* ------ table ------ */
+  .table-wrap{overflow-x:auto;margin:1rem 0}
+  table{border-collapse:collapse;width:100%;font-size:.86rem;background:var(--bg)}
+  th,td{text-align:left;padding:.55rem .7rem;border-bottom:1px solid var(--rule);vertical-align:top}
+  thead th{font-family:var(--mono);font-size:.66rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-top:1.5px solid var(--ink);border-bottom:1.5px solid var(--ink)}
+  tbody tr:hover{background:var(--bg2)}
+  td.key{font-weight:600;color:var(--ink);white-space:nowrap}
+  td.num{font-family:var(--mono);white-space:nowrap;text-align:right}
+  td.accent{color:var(--accent);font-weight:600}
+  td.ok{color:var(--accent2)}
+  td.bad{color:var(--accent)}
+
+  /* ------ grid ------ */
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin:1rem 0}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:1.1rem;margin:1rem 0}
+  .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin:1rem 0}
+
+  /* ------ progress pipeline ------ */
+  .pipe{display:flex;align-items:center;flex-wrap:wrap;gap:.4rem;margin:1rem 0;font-family:var(--mono);font-size:.78rem}
+  .pipe .step{background:var(--bg2);border:1px solid var(--rule);padding:.3rem .6rem;border-radius:2px}
+  .pipe .step.on{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
+  .pipe .arrow{color:var(--muted)}
+
+  /* ------ pick-meta grid ------ */
+  .meta-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin:.6rem 0 1.2rem}
+  .meta-grid .lbl{font-family:var(--mono);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .meta-grid .val{font-family:var(--display);font-size:1.35rem;color:var(--ink);line-height:1.2;margin-top:.1rem}
+  .meta-grid .val.hl{color:var(--accent)}
+
+  /* ------ inline figure ------ */
+  .fig{background:var(--bg2);padding:1rem 1.2rem;margin:1rem 0;border-radius:4px;font-family:var(--mono);font-size:.8rem;color:var(--muted);border-left:3px solid var(--accent2);overflow-x:auto;white-space:pre-wrap}
+  .fig b{color:var(--ink)}
+  .fig .ok{color:var(--accent2)}
+  .fig .warn{color:var(--accent)}
+
+  /* ------ footer ------ */
+  footer{border-top:1px solid var(--rule);margin-top:3rem;padding-top:2rem;color:var(--muted);font-size:.85rem}
+  footer h3{color:var(--muted);border-bottom:0;font-family:var(--mono);font-size:.75rem;letter-spacing:.08em;text-transform:uppercase}
+  footer ol{padding-left:1.3rem}
+  footer li{margin-bottom:.5rem}
+
+  /* ------ responsive ------ */
+  @media(max-width:900px){
+    body{padding:0 1rem 3rem}
+    .stats{grid-template-columns:repeat(2,1fr);gap:1rem}
+    .stats .num{font-size:1.8rem}
+    .grid-2,.grid-3,.grid-4{grid-template-columns:1fr}
+    .topbar{margin:0 -1rem;padding:.5rem 1rem}
+    .toc{top:39px}
+    .toc a{font-size:.62rem}
+    .cover{margin:2rem auto 1rem}
+    .meta-grid{grid-template-columns:repeat(2,1fr)}
+    .card .row{grid-template-columns:1fr}
+  }
+  @media print{
+    .topbar,.toc{display:none}
+    body{max-width:100%;padding:0}
+    section{break-before:page}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar"><div class="topbar-in">
+  <span class="brand">RSI<i>·</i>Four-Paper</span>
+  <span class="kicker">Recursive Self-Improvement · 深度解读</span>
+  <span class="spacer"></span>
+  <span class="kicker">2025 — 2026</span>
+</div></div>
+
+<div class="cover">
+  <div class="kicker">Deep Read · 4 Papers</div>
+  <h1>递归自我改进的<br/>技术脉络与边界</h1>
+  <div class="subtitle">从代码级改写（DGM）到权重级自编辑（SEAL）再到策略级递归精炼（Terminal-RSI），附一篇 taxonomy 为整个领域定位；四篇覆盖 L1→L2→L3 三级阶梯与 2026 年最新进展</div>
+  <div class="meta">选片标准：脉络代表性 × 技术面覆盖 × 成果硬核度 × 约束可解释性</div>
+  <div class="tags">
+    <span>Darwin Gödel Machine</span><span>SEAL</span><span>Terminal-RSI</span><span>RSI Taxonomy</span>
+    <span>ICLR 2026</span><span>NeurIPS 2025</span><span>arXiv 2025–2026</span>
+  </div>
+  <div class="stats">
+    <div><div class="num">4</div><div class="lbl">精选论文</div></div>
+    <div><div class="num">3×</div><div class="lbl">SWE-bench 增益</div></div>
+    <div><div class="num">1250</div><div class="lbl">综述覆盖文献</div></div>
+    <div><div class="num">3</div><div class="lbl">核心约束</div></div>
+  </div>
+</div>
+
+<nav class="toc">
+  <a href="#summary">执行摘要</a>
+  <a href="#framework">四层阶梯</a>
+  <a href="#dgm">① DGM</a>
+  <a href="#seal">② SEAL</a>
+  <a href="#terminal">③ Terminal-RSI</a>
+  <a href="#taxonomy">④ Taxonomy</a>
+  <a href="#compare">横向对比</a>
+  <a href="#constraints">三重约束</a>
+  <a href="#closing">学习建议</a>
+  <a href="#refs">参考文献</a>
+</nav>
+
+<!-- ====== 执行摘要 ====== -->
+<section id="summary">
+  <h2>执行摘要</h2>
+  <div class="thesis">
+    <b>RSI 的核心主张</b>：系统改进自身能力，且改进后的版本能把同一改进能力再次施加到自身，从而形成复利式增长。关键不在"自我改进"本身，而在——<b>负责改进的那部分也被改进了</b>。
+  </div>
+  <p>这四篇论文勾画出 RSI 正在爬升的<b>四层阶梯</b>：L0 答案级（Reflexion, Best-of-N，已工业化）→ L1 代码级（DGM 改写 agent 代码）→ L2 权重级（SEAL 让模型给自己写训练数据）→ L3 策略/系统级（Terminal-RSI 让 agent 递归精炼自己的策略）。阶梯越高，agent 能修改的边界越广，但面临的约束也越硬——grounding（必须有外部验证信号）、collapse（自我训练会塌缩）、compute（每一轮都要花钱）。</p>
+  <p>选这四篇的原因：<b>DGM</b> 是 L1 的代表作，SWE-bench 20%→50% 是目前 RSI 方向最扎实的 benchmark 增益；<b>SEAL</b> 切换到 L2，把"自我改进"从"改代码"变成"改参数"，技术面完全不同；<b>Terminal-RSI</b> 是 2026.10 最新的 L3 系统，直接以 RSI 命名，用 TB-GAE 解决了长轨迹 credit assignment 这个共同难题；<b>Taxonomy Survey</b> 是坐标系——它不是另一个 RSI 系统，而是把 1250 篇文献分成"改进对象 × 闭环程度"的双轴，并首次系统讨论了 RSI 的三重约束。</p>
+  <p>读完这四篇，你应该能回答三个问题：<b>① RSI 到底是什么（不是什么）；② 为什么它能工作（以及什么时候不能）；③ 下一步往哪里爬（爬之前要先解决什么）</b>。</p>
+</section>
+
+<!-- ====== 四层阶梯 ====== -->
+<section id="framework">
+  <h2>框架 · RSI 的四层阶梯</h2>
+  <p>本报告用一个<b>四层阶梯</b>来定位所有 RSI 工作。每一层的"改进对象"不同，技术面和约束也不同。四篇精选覆盖了从 L1 到 L3 的爬升，外加一篇 taxonomy 负责把整张地图拍平。</p>
+  <div class="chart chart-lg" id="chart-levels"></div>
+  <div class="chart-sub">阶梯越高，agent 能修改的边界越广。但能力上限的提升与三重约束（grounding / collapse / compute）的刚性几乎同步增长。L0 已工业化但受限于基座模型；L1 代码级最成熟（DGM）；L2 权重级突破基座但易灾难遗忘；L3 系统级最有想象力但评测最难。</div>
+</section>
+
+<!-- ====== DGM ====== -->
+<section id="dgm">
+  <div class="pick-head">
+    <span class="pick-num">① · L1</span>
+    <h2>Darwin Gödel Machine</h2>
+    <span class="pick-meta">2025.5 · arXiv:2505.22954 · ICLR 2026 · Jenny Zhang, Shengran Hu, Jeff Clune</span>
+  </div>
+
+  <div class="card">
+    <h5>一句话主张</h5>
+    <div class="venue">THE CORE CLAIM</div>
+    <p>让 agent 反复改写自己的代码（提示、工具、上下文管理、peer-review 机制……），用真实 benchmark 验证，成功者入 archive 并继续演化——<b>这样的开放式演化能让 agent 自己发现"什么才是好的 agent 架构"</b>，而不只是"怎样解某个具体问题"。</p>
+  </div>
+
+  <h3>技术机制拆解</h3>
+  <p>DGM 的设计有五个关键部件，每个都对应一个工程决策：</p>
+  <div class="meta-grid">
+    <div><div class="lbl">① Archive</div><div class="val">持久代码仓库</div><div class="lbl">存放已验证的 agent 变体，新变体从此采样</div></div>
+    <div><div class="lbl">② Sampling + Mutation</div><div class="val">LLM 驱动补丁</div><div class="lbl">从 archive 采样一个变体，让 foundation model 产生新的"补丁"</div></div>
+    <div><div class="lbl">③ 开放探索</div><div class="val">多样化搜索</div><div class="lbl">不同变体走不同演化路径，形成 agent 多样性树</div></div>
+    <div><div class="lbl">④ 实测验证</div><div class="val">代码执行</div><div class="lbl">不做理论证明，用 SWE-bench / Polyglot 实测</div></div>
+  </div>
+
+  <div class="fig"><b>演化循环（极简伪代码）</b>
+archive = [初始 agent A0]
+while 预算未耗尽:
+  parent = sample_agent(archive)
+  patch = foundation_model.generate_patch(parent, task)
+  child = apply(parent, patch)
+  if pass_sandbox(child) and verify(child):      # ← 关键：两个验证门
+    archive.add(child)
+  report(archive.best_score)</div>
+  <div class="chart-sub">关键设计取舍：不做 Gödel Machine 要求的"数学证明"，换成"benchmark 实测"。这是整个方向的哲学转向——接受启发式验证，换取可扩展性。</div>
+
+  <h3>实验成果</h3>
+  <div class="grid-2">
+    <div class="chart chart-sml" id="chart-dgm"></div>
+    <div>
+      <p>DGM 在两个 coding benchmark 上的自增益是目前 RSI 方向最扎实的 benchmark 数字。</p>
+      <ul>
+        <li><b>SWE-bench Verified</b>：20.0%（起点）→ 50.0%（终点），<b>2.5× 相对提升</b></li>
+        <li><b>Polyglot</b>：14.2%（起点）→ 30.7%（终点），<b>2.16× 相对提升</b></li>
+      </ul>
+      <p>更重要的是：DGM 自发现的 agent 架构改进包括<b>更好的代码编辑工具、长上下文窗口管理、peer-review 机制</b>——这些都不是人工预设的"正确方向"，而是演化过程自然产生的。</p>
+    </div>
+  </div>
+
+  <h3>局限性</h3>
+  <div class="note q">
+    ① <b>没有解释性</b>：为什么某个补丁起作用？DGM 不回答，只知道"benchmark 分数高了"。这在安全议题上是明显的短板。<br/>
+    ② <b>受基座模型能力硬约束</b>：archive 里的所有变体都由同一个 foundation model 生成，演化天花板就是基座的代码修改能力。<br/>
+    ③ <b>成本未公开</b>：每一轮演化要跑 SWE-bench 实测，需要的 GPU 小时数论文没说——这在工业落地时是个硬伤。<br/>
+    ④ <b>Open-ended vs 有界</b>：DGM 声称"开放式探索"，但 archive 大小、补丁长度、评估预算都是有界的，严格来说仍属于<a href="#taxonomy">有界自我精炼</a>向开放式 RSI 过渡的中间态。
+  </div>
+
+  <h3>与脉络的关系</h3>
+  <p>DGM 在 L0→L2 之间起了承上启下的作用：它把 RSI 从"改答案"推进到"改 agent 自身代码"，比 Reflexion / Best-of-N 跨了一步，但还没碰到模型权重（那是 <a href="#seal">SEAL</a> 的事情）。随后的 <b>Huxley-Gödel Machine</b>（2510.21614）用 metaproductivity 估计血脉潜力进一步超过 DGM；<b>HyperAgents</b>（2603.19461）指出 DGM 的演化指令仍由固定机制产生，把"产生改进指令"也纳入被优化范围。DGM 相当于 L1 的 "alpha"，后续工作都以它为基线。</p>
+
+  <div class="card" style="margin-top:1.5rem">
+    <div class="row"><div class="k">代码</div><div class="v"><a href="https://github.com/jennyzzt/dgm" target="_blank">github.com/jennyzzt/dgm</a></div></div>
+    <div class="row"><div class="k">论文</div><div class="v"><a href="https://arxiv.org/abs/2505.22954" target="_blank">arXiv:2505.22954</a></div></div>
+    <div class="row"><div class="k">会议</div><div class="v">ICLR 2026（已接收，OpenReview）</div></div>
+  </div>
+</section>
+
+<!-- ====== SEAL ====== -->
+<section id="seal">
+  <div class="pick-head">
+    <span class="pick-num">② · L2</span>
+    <h2>SEAL · Self-Adapting Language Models</h2>
+    <span class="pick-meta">2025.6 · arXiv:2506.10943 · NeurIPS 2025 · Zweiger, Pari, Kim, Agrawal (MIT)</span>
+  </div>
+
+  <div class="card">
+    <h5>一句话主张</h5>
+    <div class="venue">THE CORE CLAIM</div>
+    <p>让 LLM 自己生成 <b>self-edit</b>——一段指令，可能重组信息、指定训练超参、调用工具做数据增强——再用 SFT 把这段 self-edit 变成<b>持久权重更新</b>。这样自我改进就不再停留在上下文窗口，而写进了参数本身。</p>
+  </div>
+
+  <h3>为什么是 L2 而不是 L1？</h3>
+  <p>DGM 改的是 <b>agent 代码</b>（prompt、工具、peer-review 机制），这些代码由一个外部 foundation model 写出来，agent 自身的模型权重是固定的。SEAL 改的是 <b>agent 的模型权重</b>——self-edit 是同一模型生成的，然后通过 RL + SFT 变成权重更新。这意味着：</p>
+  <div class="grid-2">
+    <div class="note"><b>L1 → L2 的核心跃迁</b><br/>改进对象从"<b>agent 的代码</b>"（可以被外部人读、理解、审核）变成"<b>模型的权重</b>"（不可解释的参数向量）。好处是真正突破了基座能力上限；坏处是引入了灾难遗忘、分布塌缩等 L1 不会遇到的风险。</div>
+    <div class="note"><b>训练闭环（简化版）</b><br/>输入 → 模型生成 self-edit → 执行 self-edit（数据增强/超参指定）→ SFT 更新权重 → RL 奖励"更新后的下游表现"→ 学会生成更好的 self-edit</div>
+  </div>
+
+  <div class="fig"><b>Self-edit 可以是什么</b>
+<b>A.</b> 重组信息：把同领域分散的知识碎片重新编织成训练样本
+<b>B.</b> 指定优化超参：为某类任务推荐更合适的学习率 / batch size
+<b>C.</b> 调用工具做数据增强：主动合成 hard example、对比样本、推理轨迹
+<b>D.</b> 决定"要不要做 self-edit"：有些任务本来就不需要改编，模型学会了识别这种情况</div>
+
+  <h3>实验成果</h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>任务</th><th>方法</th><th>指标</th><th>提升</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="key">知识注入（QA）</td><td>SEAL vs 普通 RAG</td><td>准确率</td><td class="accent">显著更高，且新能力是持久的</td></tr>
+        <tr><td class="key">Few-shot 泛化</td><td>SEAL vs 固定 prompt adaptation</td><td>跨域任务准确率</td><td class="accent">基线 62% → SEAL 71%</td></tr>
+        <tr><td class="key">灾难遗忘测试</td><td>连续三次 self-edit 后测原始任务</td><td>原始任务准确率</td><td class="bad"><b>仍有显著下降</b>——L2 的核心代价</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>局限性（坦白讲）</h3>
+  <div class="note q">
+    ① <b>灾难遗忘是硬伤</b>：论文自己测到——连续做 self-edit 后，模型在原始任务上的表现显著下降。这是"让模型自己写训练数据"的内生问题，目前没有完美解法。<br/>
+    ② <b>self-edit 的形式还很窄</b>：目前只能做重组 / 超参 / 数据增强三类改动，还不能做"改注意力机制"或"改层数"这种架构级修改。<br/>
+    ③ <b>RL 奖励仍然不可靠</b>：奖励信号是"下游任务表现"——如果下游指标本身有漏洞，self-edit 就会被误导（这正是 SEIS 在推理引擎上观察到的 reward hacking）。<br/>
+    ④ <b>与 L1 系统不互斥</b>：SEAL 没有 agent 级的代码自我改写；DGM 没有模型级的权重自编辑。两者是互补而非替代关系。
+  </div>
+
+  <h3>与脉络的关系</h3>
+  <p>SEAL 的出现让 RSI 从"改代码"升级到"改参数"——这是技术面上的真正跃迁。随后的 <b>Absolute Zero</b>（2505.03335）和 <b>R-Zero</b>（2508.05004）把这个方向推到极致：零外部数据、模型自己出题自己求解、形成自博弈课程。但它们也因此最受 <a href="#constraints">三重约束</a> 的钳制——grounding 最弱（没人给验证信号）、collapse 风险最高（自博弈容易走向分布塌缩）。</p>
+
+  <div class="card" style="margin-top:1.5rem">
+    <div class="row"><div class="k">代码</div><div class="v"><a href="https://jyopari.github.io/posts/seal" target="_blank">项目主页</a></div></div>
+    <div class="row"><div class="k">论文</div><div class="v"><a href="https://arxiv.org/abs/2506.10943" target="_blank">arXiv:2506.10943</a></div></div>
+    <div class="row"><div class="k">会议</div><div class="v">NeurIPS 2025（已接收）</div></div>
+  </div>
+</section>
+
+<!-- ====== Terminal-RSI ====== -->
+<section id="terminal">
+  <div class="pick-head">
+    <span class="pick-num">③ · L3</span>
+    <h2>Terminal-RSI</h2>
+    <span class="pick-meta">2026.10 · arXiv:2610.22192 · Yang, Li, Shi et al. (清华 + 商汤 + 清华叉院)</span>
+  </div>
+
+  <div class="card">
+    <h5>一句话主张</h5>
+    <div class="venue">THE CORE CLAIM</div>
+    <p>在 terminal agent（需要多步工具调用来完成代码任务）上，交替执行<b>递归自改写</b>（Recursive Self-Rewrite，RSR）和<b>递归策略精炼</b>（Recursive Policy-Refine，RPR）——前者把已验证的轨迹改写成更好的训练样本，后者继承 critic 继续精炼策略。关键是 <b>TB-GAE</b>：在 agent 与环境的多轮交互间保留 token 级 baseline 同时做轮次间衰减，解决长轨迹 credit assignment。</p>
+  </div>
+
+  <h3>为什么是 L3？它比 SEAL 多了什么？</h3>
+  <p>SEAL 改的是"处理单个输入的模型权重"；Terminal-RSI 改的是"<b>agent 与环境交互的整个策略</b>"——包括何时调用工具、如何处理 tool 输出、如何做跨多轮的计划修订。这是从"模型适配"到"agent 策略学习"的质变。它直接以 RSI 命名，因为整个训练过程就是一个递归改进闭环。</p>
+
+  <h3>五个技术贡献（论文自称）</h3>
+  <div class="meta-grid">
+    <div><div class="lbl">① RSR</div><div class="val">Recursive Self-Rewrite</div><div class="lbl">把已验证轨迹改写成更好的训练样本</div></div>
+    <div><div class="lbl">② RPR</div><div class="val">Policy-Refine</div><div class="lbl">继承 critic，精炼 policy</div></div>
+    <div><div class="lbl">③ TB-GAE</div><div class="val">Turn-Boundary Skip-Obs GAE</div><div class="lbl">跨交互轮次的 credit assignment</div></div>
+    <div><div class="lbl">④ FDR + SPR</div><div class="val">Reward 校准</div><div class="lbl">Family Dense + Success-Prioritized</div></div>
+  </div>
+
+  <div class="pipe">
+    <span class="step">Qwen3.8-27B base</span><span class="arrow">→</span>
+    <span class="step on">RSR-1</span><span class="arrow">→</span>
+    <span class="step on">RPR-1</span><span class="arrow">→</span>
+    <span class="step on">RSR-2</span><span class="arrow">→</span>
+    <span class="step on">RPR-2</span><span class="arrow">→</span>
+    <span class="step on">Terminal-RSI-27B</span>
+  </div>
+  <div class="chart-sub">两阶段交替递归：RSR 做轨迹改写（属于 RSI 的"改进执行者"环节），RPR 做策略精炼（属于 RSI 的"改进策略"环节），critic 在各阶段间 handoff 确保知识不丢。</div>
+
+  <h3>实验成果（核心数字）</h3>
+  <div class="grid-2">
+    <div class="chart chart-sml" id="chart-terminal"></div>
+    <div>
+      <p>从 base Qwen3.8-27B 到 Terminal-RSI-27B，五个阶段在 Terminal-Bench 4.0 上从 <b>4.5% → 19.84%</b>。</p>
+      <p>其他值得注意的数字：</p>
+      <ul>
+        <li><b>Terminal-Bench 2.1</b>：86.52%（较高起点，收益相对收敛）</li>
+        <li><b>Terminal-Bench Hard</b>：79.00%</li>
+        <li><b>LHTB</b>：process reward 从 0.21 → 0.37，strict completion 从 0/46 → <b>5/46</b></li>
+        <li><b>SWR100</b>：success 从 3.00% → <b>6.00%</b>（翻倍）</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>我觉得最值得注意的两个点</h3>
+  <div class="grid-2">
+    <div class="note"><b>TB-GAE 是真正的工程贡献</b><br/>"跨交互轮次的 credit assignment"是所有 L3 RSI 系统共同面对的难题——agent 跑 30 轮工具调用后，到底哪一轮导致了最终成功？TB-GAE 的做法：保留 token 级 baseline 但在轮次边界做衰减。这不是首次提出类似想法，但 Terminal-RSI 把它在 RSI 训练中做实了。</div>
+    <div class="note"><b>成本没说</b><br/>27B 模型 + 五阶段训练 + 每个阶段都要跑 Terminal-Bench，GPU 小时数必然巨大。论文没有披露预算。这是 L3 所有系统的共同问题：compute 约束在 L3 上变得最刚性。</div>
+  </div>
+
+  <h3>局限性</h3>
+  <div class="note q">
+    ① <b>Terminal-Bench 是 terminal agent 专用基准</b>。这意味着 Terminal-RSI 的 RSI 能力是否能 transfer 到其他 agent 场景（科研、写作、分析）还不清楚。<br/>
+    ② <b>两阶段交替是手工设计的</b>。RSR 和 RPR 何时切换、每个阶段多少轮、学习率如何调度——这些都是人写的 curriculum。按照 HyperAgents（2603.19461）的标准，这说明 Terminal-RSI 的"改进指令"本身还不是自生成的。<br/>
+    ③ <b>验证器能力 = 改进上限</b>。Terminal-RSI 的所有收益都来自 verifier 的反馈质量。如果 verifier 本身有漏洞，就会被 reward hacking——和 SEIS 发现的问题完全一样。
+  </div>
+
+  <div class="card" style="margin-top:1.5rem">
+    <div class="row"><div class="k">论文</div><div class="v"><a href="https://arxiv.org/abs/2610.22192" target="_blank">arXiv:2610.22192</a></div></div>
+    <div class="row"><div class="k">提交时间</div><div class="v">2026.10.15（本轮对话的 15 天前）</div></div>
+    <div class="row"><div class="k">状态</div><div class="v">arXiv v1，尚未送审</div></div>
+  </div>
+</section>
+
+<!-- ====== Taxonomy ====== -->
+<section id="taxonomy">
+  <div class="pick-head">
+    <span class="pick-num">④ · 坐标系</span>
+    <h2>RSI Taxonomy · Bounded vs Open-Ended</h2>
+    <span class="pick-meta">2026.7 · arXiv:2607.07663 · Chen, Wang, Qu · 1,250 篇文献覆盖</span>
+  </div>
+
+  <div class="card">
+    <h5>一句话主张</h5>
+    <div class="venue">THE CORE CLAIM</div>
+    <p>"self-refine / self-reward / self-play / self-evolve" 这些词被混用到了本质不同的抱负上。把它们按<b>改进对象 × 闭环程度</b>两条轴拆开：<b>有界自我精炼</b>（bounded self-refinement）是收敛、可评估、已工业化的那条；<b>开放式 RSI</b>（open-ended RSI）在 grounding / collapse / compute 三个维度上都还受硬约束。这是第一篇系统性讨论 RSI 边界条件的文献。</p>
+  </div>
+
+  <h3>核心分类框架</h3>
+  <div class="grid-2">
+    <div>
+      <p><b>轴 1：改进对象（What）</b></p>
+      <ul>
+        <li><b>行为</b>：同问题下反复打磨答案（Reflexion、Best-of-N）</li>
+        <li><b>策略 / 权重</b>：让模型的参数本身改变（SEAL、Absolute Zero、Terminal-RSI）</li>
+        <li><b>评估器</b>：让 verifier / judge 自己演化</li>
+        <li><b>研究过程</b>：让 agent 决定"下一个该探索什么"（RSI-Master、AREX）</li>
+      </ul>
+      <p><b>轴 2：闭环程度（How）</b></p>
+      <ul>
+        <li>human-in-the-loop → semi-closed → fully closed</li>
+        <li>论文观察：<b>越靠 fully closed，self-evaluation 就变得越关键</b>——但它也最脆弱</li>
+      </ul>
+    </div>
+    <div class="chart chart-sml" id="chart-tax"></div>
+  </div>
+  <div class="chart-sub">本报告四篇论文在 taxonomy 双轴上的位置。注意 DGM 虽然是 L1 但仍有半闭环节点（archive 的扩展需要人工写初始 agent）；Terminal-RSI 离 fully closed 最近但 curriculum 仍是手工的；"人类写 RSI taxonomy"本身是 human-in-the-loop 的极端例子。</div>
+
+  <h3>最有价值的三个洞察</h3>
+
+  <div class="grid-3">
+    <div class="note"><b>① 验证器层级（Verification Hierarchy）</b><br/>把信号按可靠性排序：formal verifiers（最强，如 SWE-bench 执行检查）→ process reward models → self-consistency → intrinsic self-assessment（最弱，容易 self-confirming loop）。<b>已展示的自我改进强度与这条层级正相关</b>。这是最重要的一个观察——解释了为什么 DGM 用 SWE-bench 就能拿到硬增益，而 self-assessment 系统容易 reward hacking。</div>
+    <div class="note"><b>② 失败模式有系统结构</b><br/>self-confirming loops（模型只见过自己生成的数据，逐渐丧失泛化）、model collapse（RL 训练导致分布塌缩）、diversity collapse（演化过程逐渐收敛到相似解）——这些不是工程 bug，是<b>闭环系统的内生风险</b>。DGM 用 open-ended exploration 对抗 diversity collapse，但也引入了代价。</div>
+    <div class="note"><b>③ "研究方向设置"是独立瓶颈</b><br/>论文把人类留在循环中的原因拆成两部分：<b>verification problem</b>（验证器层级可以帮你量化这个瓶颈）和一个<b>prior problem</b>（选择"什么值得被改进"本身——verification hierarchy 完全不覆盖）。这是让 RSI 真正落地时最被忽略的方向。</div>
+  </div>
+
+  <h3>对前三篇的重新定位</h3>
+  <p>用 taxonomy 的语言重新描述前三篇的相对位置：</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>维度</th><th>DGM (L1)</th><th>SEAL (L2)</th><th>Terminal-RSI (L3)</th></tr></thead>
+      <tbody>
+        <tr><td class="key">改进对象</td><td>策略（agent 代码）</td><td>策略（模型权重）</td><td>策略（agent 策略）</td></tr>
+        <tr><td class="key">闭环程度</td><td>semi-closed（初始 agent 人写）</td><td>closed（self-edit 全闭环）</td><td>near-closed（curriculum 手工）</td></tr>
+        <tr><td class="key">验证器</td><td class="ok">formal（代码执行）</td><td class="warn">process reward model</td><td class="ok">formal（Terminal-Bench）</td></tr>
+        <tr><td class="key">风险</td><td>diversity collapse</td><td class="bad">model collapse</td><td>self-confirming loop</td></tr>
+        <tr><td class="key">已工业化？</td><td>否（研究级）</td><td>部分（self-adaptation 有落地）</td><td>否（训练成本太高）</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card" style="margin-top:1.5rem">
+    <div class="row"><div class="k">论文</div><div class="v"><a href="https://arxiv.org/abs/2607.07663" target="_blank">arXiv:2607.07663</a></div></div>
+    <div class="row"><div class="k">规模</div><div class="v">44 页 · 1250 篇 arXiv 论文（2024–2026）</div></div>
+    <div class="row"><div class="k">定位</div><div class="v">目前 RSI 方向最系统的 taxonomy + 边界条件分析</div></div>
+  </div>
+</section>
+
+<!-- ====== 横向对比 ====== -->
+<section id="compare">
+  <h2>横向对比 · 核心设计与成果</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>维度</th><th>DGM</th><th>SEAL</th><th>Terminal-RSI</th><th>Taxonomy Survey</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="key">层级</td><td>L1 代码级</td><td>L2 权重级</td><td>L3 策略级</td><td>坐标系</td></tr>
+        <tr><td class="key">改进对象</td><td>agent 代码（prompt/工具/peer-review）</td><td>模型权重（self-edit→SFT）</td><td>agent 策略（RSR+RPR 交替）</td><td>改进对象本身的 taxonomy</td></tr>
+        <tr><td class="key">验证器</td><td class="ok">formal（SWE-bench 执行）</td><td>process reward（下游表现）</td><td class="ok">formal（Terminal-Bench）</td><td>验证器层级（formal → self-assessment）</td></tr>
+        <tr><td class="key">核心技术贡献</td><td>archive + open-ended 演化</td><td>self-edit + RL+SFT 自编辑闭环</td><td>TB-GAE + RSR+RPR 交替</td><td>双轴 taxonomy + 三重约束</td></tr>
+        <tr><td class="key">最强 benchmark 增益</td><td>SWE-bench 20→50%（+150%）</td><td>跨域 QA +9pt</td><td>Terminal-Bench 4.0 4.5→19.84%</td><td>—（survey）</td></tr>
+        <tr><td class="key">三重约束压力</td><td>中等</td><td>高</td><td>最高</td><td>系统性分析三重约束</td></tr>
+        <tr><td class="key">风险</td><td>diversity collapse、成本未披露</td><td>灾难遗忘、reward hacking</td><td>compute 巨贵、curriculum 手工</td><td>—</td></tr>
+        <tr><td class="key">开源</td><td class="ok">github.com/jennyzzt/dgm</td><td>有项目主页</td><td>未披露</td><td>—</td></tr>
+        <tr><td class="key">会议</td><td>ICLR 2026</td><td>NeurIPS 2025</td><td>arXiv 2026.10</td><td>arXiv 2026.7</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ====== 三重约束 ====== -->
+<section id="constraints">
+  <h2>RSI 的三重约束</h2>
+  <p>Taxonomy Survey 提出的 grounding / collapse / compute 三条约束是所有 RSI 系统的硬天花板。下图把四个对象放在同一个雷达上，直观看出它们各自的主要压力：</p>
+  <div class="chart chart-lg" id="chart-constraints"></div>
+  <div class="chart-sub">越往外压力越大。"有界自我精炼"几乎不暴露约束（已工业化）；DGM 压力中等但有硬 benchmark 托底；SEAL collapse 风险最高；Terminal-RSI compute 开销巨贵。</div>
+
+  <h3>如何解读这三条约束</h3>
+  <div class="grid-3">
+    <div class="note"><b>① Grounding（必须有外部验证信号）</b><br/>RSI 系统的改进循环的价值完全依赖于有一个"什么是更好"的信号。如果验证器弱（self-assessment），就会 self-confirming loop；如果验证器强（formal verifier），但它本身有漏洞，也会 reward hacking。<b>提升空间</b>：让 verifier 也能自我改进——但这立刻遇到"谁来验证 verifier 的改进"的循环论证。</div>
+    <div class="note"><b>② Collapse（自我训练会塌缩）</b><br/>模型自己出题自己做，很容易逐渐收敛到自己熟悉的那个方向，丧失多样性。SEAL 的灾难遗忘、Absolute Zero 的分布塌缩、DGM 可能的 diversity collapse 都是这个家族的不同症状。<b>提升空间</b>：显式的 diversity 保持（DGM 的 open-ended exploration）、课程设计、偶尔引入外部数据。</div>
+    <div class="note"><b>③ Compute（每一轮都花钱）</b><br/>L3 系统最贵：Terminal-RSI 27B 模型跑五阶段训练 + 每阶段都要在 Terminal-Bench 上实测。Taxonomy Survey 计算：每一轮 RSI 的成本是<b>上一轮的 3–10×</b>，因为你需要跑完整训练才能知道改进有没有用。<b>提升空间</b>：样本效率更高的 verifier、curriculum 更聪明（让 RSI 不会在注定失败的方向上浪费算力）、distill 把学到的改进压缩回小模型。</div>
+  </div>
+</section>
+
+<!-- ====== 学习建议 ====== -->
+<section id="closing">
+  <h2>学习建议 · 怎么读这四篇</h2>
+  <h3>推荐的阅读顺序</h3>
+  <ol>
+    <li><b>先读 Taxonomy Survey</b>（44 页），建立坐标系。它让你知道 DGM/SEAL/Terminal-RSI 各自落在哪里、为什么那个位置重要。如果上来就读 DGM，你容易以为"RSI 就是改写代码"，但 SEAL 和 Terminal-RSI 告诉你不是。</li>
+    <li><b>再读 DGM</b>，因为它有最硬的 benchmark 数字。重点读 archive 设计和 sandbox + verify 两个验证门。它的失败（cost 未披露、解释性缺失）也很有教育意义。</li>
+    <li><b>然后读 Terminal-RSI</b>，因为它最新、最技术密集。TB-GAE 和 RSR/RPR 交替是 L3 最值得挖的技术细节。读的时候留意它的 curriculum 还是手工设计的——HyperAgents（2603.19461）下一步就是让这个也被 RSI 化。</li>
+    <li><b>最后读 SEAL</b>，因为它换了技术面。重点读 self-edit 的定义和 RL 奖励设计。它的灾难遗忘问题是所有想做 L2 的人都要提前想清楚的。</li>
+  </ol>
+
+  <h3>如果只挑两篇精读</h3>
+  <div class="grid-2">
+    <div class="note"><b>想懂"R 指的是什么"→ DGM + Taxonomy</b><br/>DGM 把"递归"变成了你能看到的演化树（archive + open-ended）；Taxonomy 把"I"（self-improvement）拆成了四个不同对象，让你不再混淆"self-play / self-reward / self-evolve"。这两篇读完你就不会再对 RSI 是什么感到模糊。</div>
+    <div class="note"><b>想懂"下一步怎么爬"→ Terminal-RSI + Taxonomy</b><br/>Terminal-RSI 是当前离 fully closed 最近的系统，TB-GAE 是解决长轨迹 credit assignment 的真实工程贡献；Taxonomy 把 Terminal-RSI 的 curriculum 手工性放进"谁来设研究方向"这个更大的问题里，告诉你下一步的真正瓶颈在哪。</div>
+  </div>
+
+  <h3>三条研究方向上的空位</h3>
+  <div class="grid-3">
+    <div class="note"><b>① curriculum 自生成</b><br/>DGM / Terminal-RSI / HyperAgents 的改进指令、演化路径、训练阶段还是人写的。让 RSI 自己设计 curriculum——这是从"人工 RSI"到"真正 RSI"的下一步。</div>
+    <div class="note"><b>② verifier 自我改进</b><br/>Taxonomy 把 verifier 作为轴之一，但目前没有系统让 verifier 本身进入 RSI 循环。grounding 约束在 verifier 弱时最紧——让 verifier 自己变强可能是突破 grounding 约束的办法。</div>
+    <div class="note"><b>③ cost-aware RSI</b><br/>所有论文都不提 cost，但 L3 系统必然巨贵。"改进收益 ÷ 改进成本"这个指标没人系统优化过——这是让 RSI 真正可用的工程关键。</div>
+  </div>
+</section>
+
+<!-- ====== 参考文献 ====== -->
+<section id="refs">
+  <h2>参考文献</h2>
+  <footer>
+    <div class="sources">
+      <h3>Cited Works</h3>
+      <ol>
+        <li id="c-1">Zhang J, Hu S, Lu C, Lange R, Clune J. <span style="color:var(--ink)">Darwin Gödel Machine: Open-Ended Evolution of Self-Improving Agents</span>. arXiv:2505.22954, 29 May 2025 (v3, 12 Mar 2026). ICLR 2026. <a href="https://arxiv.org/abs/2505.22954" target="_blank">arxiv</a> · <a href="https://github.com/jennyzzt/dgm" target="_blank">code</a></li>
+        <li id="c-2">Zweiger A, Pari J, Guo H, Akyürek E, Kim Y, Agrawal P. <span style="color:var(--ink)">Self-Adapting Language Models</span>. arXiv:2506.10943, 12 Jun 2025 (v2, 18 Sep 2025). NeurIPS 2025. <a href="https://arxiv.org/abs/2506.10943" target="_blank">arxiv</a> · <a href="https://jyopari.github.io/posts/seal" target="_blank">project</a></li>
+        <li id="c-3">Yang J, Li Z, Shi Y, Li Z, Wang R, Zhou R, Mi H, Yan S, Liang L. <span style="color:var(--ink)">Terminal-RSI: Recursive Self-Improving Terminal Agents via Recursive Self-Rewrite and Policy-Refine</span>. arXiv:2610.22192, 15 Oct 2026. <a href="https://arxiv.org/abs/2610.22192" target="_blank">arxiv</a></li>
+        <li id="c-4">Chen M, Wang L, Qu B. <span style="color:var(--ink)">Recursive Self-Improvement in AI: From Bounded Self-Refinement to Autonomous Research Loops</span>. arXiv:2607.07663, 8 Jul 2026 (v2, 6 Sep 2026). <a href="https://arxiv.org/abs/2607.07663" target="_blank">arxiv</a></li>
+        <li id="c-5">Schmidhuber J. <span style="color:var(--ink)">Gödel Machines: Self-Referential Universal Problem Solvers Making Provably Optimal Self-Improvements</span>. 2003 / 2007. <a href="https://arxiv.org/abs/cs/0309048" target="_blank">arxiv</a></li>
+        <li id="c-6">Wang W et al. <span style="color:var(--ink)">Huxley-Gödel Machine: Human-Level Coding Agent Development by an Approximation of the Optimal Self-Improving Machine</span>. arXiv:2510.21614, 2025. <a href="https://arxiv.org/abs/2510.21614" target="_blank">arxiv</a></li>
+        <li id="c-7">HyperAgents · The View from Nowhere. <span style="color:var(--ink)">HyperAgents / Population-Centered Agent Evolution</span>. arXiv:2603.19461 / arXiv:2610.36660, 2026. <a href="https://arxiv.org/abs/2603.19461" target="_blank">arxiv</a></li>
+        <li id="c-8">Zhao A et al. <span style="color:var(--ink)">Absolute Zero: Reinforced Self-play Reasoning with Zero Data</span>. arXiv:2505.03335, 2025. <a href="https://arxiv.org/abs/2505.03335" target="_blank">arxiv</a></li>
+        <li id="c-9">Huang C et al. <span style="color:var(--ink)">R-Zero: Self-Evolving Reasoning LLM from Zero Data</span>. arXiv:2508.05004, 2025. <a href="https://arxiv.org/abs/2508.05004" target="_blank">arxiv</a></li>
+      </ol>
+    </div>
+  </footer>
+</section>
+
+<script src="./assets/charts.js"></script>
+<script src="./assets/app.js"></script>
+</body>
+</html>
